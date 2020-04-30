@@ -5,6 +5,8 @@ const TerserJSPlugin = require("terser-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const OptimizeCSSAssetsPlugin = require("optimize-css-assets-webpack-plugin");
 
+const devMode = process.env.NODE_ENV !== "production";
+
 module.exports = {
   mode: "development",
   entry: "./src/index.js",
@@ -20,6 +22,9 @@ module.exports = {
           "style-loader",
           {
             loader: MiniCssExtractPlugin.loader,
+            options: {
+              hmr: process.env.NODE_ENV === "development",
+            },
           },
           "css-loader",
           "resolve-url-loader",
@@ -48,7 +53,7 @@ module.exports = {
   },
   devtool: "inline-source-map",
   optimization: {
-    minimize: true,
+    minimize: devMode ? false : true,
     minimizer: [new TerserJSPlugin({}), new OptimizeCSSAssetsPlugin({})],
   },
   plugins: [
@@ -59,7 +64,7 @@ module.exports = {
       favicon: "./src/assets/images/favicon.png",
     }),
     new MiniCssExtractPlugin({
-      filename: "[name].css",
+      filename: devMode ? "[name].css" : "[name].[hash].css",
     }),
   ],
 };
