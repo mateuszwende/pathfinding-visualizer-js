@@ -184,7 +184,7 @@ class Board {
 
   handleMouseDown(block) {
     const id = block.id;
-    if (this.nodes[id].status === "start" || this.nodes[id].status === "end") {
+    if (!this.isNodeBlock(id)) {
       this.draggedNodeId = id;
       this.isNodeDragged = true;
     } else if (!this.isNodeDragged) {
@@ -194,7 +194,7 @@ class Board {
   }
 
   handleMouseEnter(block) {
-    if (this.isNodeDragged) {
+    if (this.isNodeDragged && !this.isBlockWall(block)) {
       const draggedNode = this.nodes[this.draggedNodeId];
       if (draggedNode.status === "start" && !block.classList.contains("end")) {
         const directionName = getDirectionName(draggedNode.direction);
@@ -205,14 +205,18 @@ class Board {
       ) {
         block.classList.add("end");
       }
-    } else if (this.isMakingWalls) {
+    } else if (this.isMakingWalls && this.isNodeBlock(block.id)) {
       this.createWall(block);
     }
   }
 
   handleMouseUp(block) {
     const id = block.id;
-    if (this.isNodeDragged && id !== this.draggedNodeId) {
+    if (
+      this.isNodeDragged &&
+      id !== this.draggedNodeId &&
+      !this.isBlockWall(block)
+    ) {
       if (this.nodes[this.draggedNodeId].status === "start") {
         this.nodes[id].update({
           status: "start",
@@ -255,12 +259,19 @@ class Board {
     }
   }
 
+  //
+  isNodeBlock(id) {
+    return !(
+      this.nodes[id].status === "start" || this.nodes[id].status === "end"
+    );
+  }
+
   // WALLS
   createWall(block) {
     window.requestAnimationFrame(() => block.classList.add("wall"));
   }
 
-  blockHasWall(block) {
+  isBlockWall(block) {
     return block.classList.contains("wall");
   }
 

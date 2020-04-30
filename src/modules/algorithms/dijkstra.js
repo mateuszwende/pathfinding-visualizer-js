@@ -28,29 +28,33 @@ export const dijkstra = async (nodes, start, end, speed) => {
       break;
     }
 
-    getNeighborsIds(nodes, currNode.x, currNode.y).forEach((neighborId) => {
-      const distanceBetweenNodes = getDistanceBetweenNodes(
-        currNode,
-        nodes[neighborId]
-      );
-
-      // VISUALIZE
-      document
-        .getElementById(nodes[neighborId].id)
-        .classList.replace("unvisited", "neighbor");
-
-      const isNeighborFurtherFromStart =
-        currNode.dist + distanceBetweenNodes < nodes[neighborId].dist;
-
-      if (isNeighborFurtherFromStart) {
-        nodes[neighborId].dist = currNode.dist + distanceBetweenNodes;
-        nodes[neighborId].prevId = currNode.id;
-        nodes[neighborId].direction = getNodeDirection(
+    getNeighborsIds(unvisitedNodesIds, nodes, currNode.x, currNode.y).forEach(
+      (neighborId) => {
+        const distanceBetweenNodes = getDistanceBetweenNodes(
           currNode,
           nodes[neighborId]
         );
+
+        // VISUALIZE
+        document
+          .getElementById(nodes[neighborId].id)
+          .classList.remove("neighbor");
+
+        document.getElementById(nodes[neighborId].id).classList.add("neighbor");
+
+        const isNeighborFurtherFromStart =
+          currNode.dist + distanceBetweenNodes < nodes[neighborId].dist;
+
+        if (isNeighborFurtherFromStart) {
+          nodes[neighborId].dist = currNode.dist + distanceBetweenNodes;
+          nodes[neighborId].prevId = currNode.id;
+          nodes[neighborId].direction = getNodeDirection(
+            currNode,
+            nodes[neighborId]
+          );
+        }
       }
-    });
+    );
   }
 
   if (foundEnd) {

@@ -1,7 +1,7 @@
 /**
  * Get node neighbors's keys
  */
-export const getNeighborsIds = (nodes, x, y) => {
+export const getNeighborsIds = (unvisitedNodesIds, nodes, x, y) => {
   let arr = [];
   if (
     nodes[`${x}-${y + 1}`] &&
@@ -27,5 +27,8 @@ export const getNeighborsIds = (nodes, x, y) => {
   ) {
     arr.push(`${x - 1}-${y}`);
   }
-  return arr;
+
+  return arr.filter((potentialNeighborId) =>
+    unvisitedNodesIds.find((nodeId) => potentialNeighborId === nodeId)
+  );
 };

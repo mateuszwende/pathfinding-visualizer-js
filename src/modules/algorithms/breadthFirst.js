@@ -27,19 +27,22 @@ export const breadthFirst = async (nodes, start, end, speed) => {
       break;
     }
 
-    getNeighborsIds(nodes, currNode.x, currNode.y).forEach((neighborId) => {
-      const isNeighborFurtherFromStart = currNode.dist < nodes[neighborId].dist;
+    getNeighborsIds(unvisitedNodesIds, nodes, currNode.x, currNode.y).forEach(
+      (neighborId) => {
+        const isNeighborFurtherFromStart =
+          currNode.dist < nodes[neighborId].dist;
 
-      if (isNeighborFurtherFromStart) {
-        nodes[neighborId].dist = currNode.dist + 1;
-        nodes[neighborId].prevId = currNode.id;
+        if (isNeighborFurtherFromStart) {
+          nodes[neighborId].dist = currNode.dist + 1;
+          nodes[neighborId].prevId = currNode.id;
+        }
+
+        // VISUALIZE
+        document
+          .getElementById(nodes[neighborId].id)
+          .classList.replace("unvisited", "neighbor");
       }
-
-      // VISUALIZE
-      document
-        .getElementById(nodes[neighborId].id)
-        .classList.replace("unvisited", "neighbor");
-    });
+    );
   }
 
   if (foundEnd) {
