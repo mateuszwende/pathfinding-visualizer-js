@@ -5,66 +5,68 @@ const TerserJSPlugin = require("terser-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const OptimizeCSSAssetsPlugin = require("optimize-css-assets-webpack-plugin");
 
-const devMode = process.env.NODE_ENV !== "production";
-
-module.exports = {
-  mode: "development",
-  entry: "./src/index.js",
-  output: {
-    filename: "bundle.js",
-    path: path.resolve(__dirname, "dist"),
-  },
-  module: {
-    rules: [
-      {
-        test: /\.s[ac]ss$/i,
-        use: [
-          "style-loader",
-          {
-            loader: MiniCssExtractPlugin.loader,
-            options: {
-              hmr: process.env.NODE_ENV === "development",
+module.exports = (env, argv) => {
+  const mode = argv["mode"] ? argv["mode"] : "development";
+  const isDevMode = mode !== "production";
+  return {
+    mode: mode,
+    entry: "./src/index.js",
+    output: {
+      filename: "bundle.js",
+      path: path.resolve(__dirname, "dist"),
+    },
+    module: {
+      rules: [
+        {
+          test: /\.s[ac]ss$/i,
+          use: [
+            "style-loader",
+            {
+              loader: MiniCssExtractPlugin.loader,
+              options: {
+                hmr: isDevMode ? true : false,
+              },
             },
-          },
-          "css-loader",
-          "resolve-url-loader",
-          {
-            loader: "sass-loader",
-            options: { sourceMap: true },
-          },
-        ],
-      },
-      {
-        test: /\.html$/i,
-        loader: "html-loader",
-      },
-      {
-        test: /\.(woff|woff2|eot|ttf|otf)$/,
-        use: ["file-loader"],
-      },
-      {
-        test: /\.(png|svg|jpg|gif)$/,
-        use: "file-loader",
-      },
+            "css-loader",
+            "resolve-url-loader",
+            {
+              loader: "sass-loader",
+              options: { sourceMap: true },
+            },
+          ],
+        },
+        {
+          test: /\.html$/i,
+          loader: "html-loader",
+        },
+        {
+          test: /\.(woff|woff2|eot|ttf|otf)$/,
+          use: ["file-loader"],
+        },
+        {
+          test: /\.(png|svg|jpg|gif)$/,
+          use: "file-loader",
+        },
+      ],
+    },
+    devServer: {
+      contentBase: "./dist",
+    },
+    devtool: "inline-source-map",
+    optimization: {
+      minimize: isDevMode ? false : true,
+      minimizer: [new TerserJSPlugin({}), new OptimizeCSSAssetsPlugin({})],
+    },
+    plugins: [
+      new CleanWebpackPlugin(),
+      new HtmlWebpackPlugin({
+        title: "Sort Algorithms Visualizer",
+        template: "./src/templates/main.html",
+        favicon: "./src/assets/images/favicon.png",
+      }),
+      new MiniCssExtractPlugin({
+        filename: isDevMode ? "[name].css" : "[name].[hash].css",
+      }),
     ],
-  },
-  devServer: {
-    contentBase: "./dist",
-  },
-  devtool: "inline-source-map",
-  optimization: {
-    minimize: devMode ? false : true,
-    minimizer: [new TerserJSPlugin({}), new OptimizeCSSAssetsPlugin({})],
-  },
-  plugins: [
-    new CleanWebpackPlugin(),
-    new HtmlWebpackPlugin({
-      title: "Sort Algorithms Visualizer",
-      template: "./src/templates/main.html",
-      favicon: "./src/assets/images/favicon.png",
-    }),
-    new MiniCssExtractPlugin({
-      filename: devMode ? "[name].css" : "[name].[hash].css",
-    }),
-  ],
+  };
 };
