@@ -115,50 +115,32 @@ export const getNodeDirection = (node_1, node_2) => {
   }
 };
 
+/**
+ * Return manhattan distance between two provided nodes with additional
+ * heuristic weight
+ *
+ */
 export const getWeightedManhattanDistance = (node, end) => {
   const xDiff = Math.abs(node.x - end.x);
   const yDiff = Math.abs(node.y - end.y);
-  let add = 0;
+  let additionalWeight = 0;
   const weights = getDirectionWeightsBasedOnCurrDirection(node.direction);
 
-  // end is
-  // on north
   if (node.y < end.y) {
-    // north-west - at least 180 deg turn
-    add += weights[0];
+    additionalWeight += weights[0];
     if (node.x < end.x) {
-      add += weights[1];
+      additionalWeight += weights[1];
     } else if (node.x > end.x) {
-      add += weights[3];
+      additionalWeight += weights[3];
     }
   } else if (node.y > end.y) {
-    add += weights[2];
+    additionalWeight += weights[2];
     if (node.x < end.x) {
-      add += weights[1];
+      additionalWeight += weights[1];
     } else if (node.x > end.x) {
-      add += weights[3];
+      additionalWeight += weights[3];
     }
   }
-  // // on
-  // else if (node.x < end.x) {
-  //   if (node.y < end.y || node.y > end.y) {
-  //     add = 2;
-  //   } else {
-  //     add = 1;
-  //   }
-  // } else if (node.y > end.y) {
-  //   if (node.x < end.x || node.x > end.x) {
-  //     add = 2;
-  //   } else {
-  //     add = 1;
-  //   }
-  // } else if (node.x > end.x) {
-  //   if (node.y < end.y || node.y > end.y) {
-  //     add = 2;
-  //   } else {
-  //     add = 1;
-  //   }
-  // }
 
-  return xDiff + yDiff + add;
+  return xDiff + yDiff + additionalWeight;
 };

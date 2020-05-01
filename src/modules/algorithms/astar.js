@@ -1,33 +1,29 @@
-import asyncDelay from "../helpers/asyncDelay";
 import {
   getDistanceBetweenNodes,
   getNodeDirection,
   getWeightedManhattanDistance,
 } from "./helpers/weighted";
 import { getNeighborsIds } from "./helpers/neighbors";
-import { visualizePath } from "../helpers/visualizePath";
-import { getClosestNodeWithHeuristicDist } from "./helpers/nodes";
+import { getClosestNodeWithHeuristicDist, isSameNode } from "./helpers/nodes";
+import {
+  visualizeVisitedNode,
+  visualizePath,
+  visualizeNeighborNode,
+} from "../helpers/visualizer";
+import { asyncForEach } from "../helpers/asyncForEach";
 
 export const astar = async (nodes, start, end, speed) => {
   let unvisitedNodesIds = Object.keys(nodes);
-
   let visitedNodes = {};
   let foundEnd = false;
-  const isSameNode = (n1, n2) => n1.x === n2.x && n1.y === n2.y;
 
-  nodes[`${start.x}-${start.y}`].update({
-    heuristicDistance: getWeightedManhattanDistance(start, end),
-  });
+  nodes[start.id].heuristicDistance = getWeightedManhattanDistance(start, end);
 
   while (unvisitedNodesIds.length) {
     const currNode = getClosestNodeWithHeuristicDist(unvisitedNodesIds, nodes);
-    // VISUALIZE
-    document.getElementById(currNode.id).classList.add("visited");
-    await asyncDelay(speed);
+    if (!currNode) break;
 
-    if (!currNode) {
-      break;
-    }
+    await visualizeVisitedNode(currNode.id, speed);
 
     visitedNodes[currNode.id] = currNode;
 
@@ -36,35 +32,41 @@ export const astar = async (nodes, start, end, speed) => {
       break;
     }
 
-    getNeighborsIds(unvisitedNodesIds, nodes, currNode.x, currNode.y).forEach(
-      (neighborId) => {
-        const distanceBetweenNodes = getDistanceBetweenNodes(
+    const neighborsIds = getNeighborsIds(
+      unvisitedNodesIds,
+      nodes,
+      currNode.x,
+      currNode.y
+    );
+
+    await asyncForEach(neighborsIds, async (neighborId) => {
+      const distanceBetweenNodes = getDistanceBetweenNodes(
+        currNode,
+        nodes[neighborId]
+      );
+
+      const isNeighborFurtherFromStart =
+        currNode.dist + distanceBetweenNodes < nodes[neighborId].dist;
+
+      if (isNeighborFurtherFromStart) {
+        await visualizeNeighborNode(neighborId, speed);
+
+        nodes[neighborId].dist = currNode.dist + distanceBetweenNodes;
+        nodes[neighborId].direction = getNodeDirection(
           currNode,
           nodes[neighborId]
         );
-
-        const isNeighborFurtherFromStart =
-          currNode.dist + distanceBetweenNodes < nodes[neighborId].dist;
-
-        if (isNeighborFurtherFromStart) {
-          // VISUALIZE
-          document
-            .getElementById(nodes[neighborId].id)
-            .classList.add("neighbor");
-
-          nodes[neighborId].dist = currNode.dist + distanceBetweenNodes;
-          nodes[neighborId].direction = getNodeDirection(
-            currNode,
-            nodes[neighborId]
-          );
-          nodes[neighborId].heuristicDistance = getWeightedManhattanDistance(
-            nodes[neighborId],
-            end
-          );
-          nodes[neighborId].prevId = currNode.id;
-        }
+        nodes[neighborId].heuristicDistance = getWeightedManhattanDistance(
+          nodes[neighborId],
+          end
+        );
+        nodes[neighborId].prevId = currNode.id;
       }
-    );
+    });
+
+    // neighborsIds.forEach((neighborId) => {
+
+    // });
   }
 
   if (foundEnd) {

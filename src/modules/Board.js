@@ -1,7 +1,5 @@
 import { createBlock } from "./helpers/block";
 import { getRandomNum } from "./helpers/getRandomNum";
-import { dijkstra } from "./algorithms/dijkstra";
-import { breadthFirst } from "./algorithms/breadthFirst";
 import { getDifferentRandomNum } from "./helpers/getDifferentRandomNum";
 import Node from "./Node";
 import { directions, getDirectionName } from "./algorithms/helpers/weighted";
@@ -14,6 +12,7 @@ class Board {
     this.height = null;
     this.nodes = {};
     this.startNode = null;
+    this.startInitialDirection = "north";
     this.endNode = null;
     this.isMakingWalls = false;
     this.isNodeDragged = false;
@@ -89,26 +88,20 @@ class Board {
   setStartNode() {
     const randX = getRandomNum(0, this.width - 1);
     const randY = getRandomNum(0, this.height - 1);
+    const id = `${randX}-${randY}`;
 
-    this.nodes[`${randX}-${randY}`].update({
-      status: "start",
-      dist: 0,
-      direction: directions["east"],
-    });
-    this.startNode = this.nodes[`${randX}-${randY}`];
-    document.getElementById(this.startNode.id).classList.add("start", "east");
+    this.setNodeAsStart(id);
+    document
+      .getElementById(this.startNode.id)
+      .classList.add("start", this.startInitialDirection);
   }
 
   setEndNode() {
     const randX = getDifferentRandomNum(0, this.width - 1, this.startNode.x);
     const randY = getDifferentRandomNum(0, this.height - 1, this.startNode.y);
+    const id = `${randX}-${randY}`;
 
-    this.nodes[`${randX}-${randY}`].status = "end";
-    this.nodes[`${randX}-${randY}`].update({
-      status: "end",
-    });
-
-    this.endNode = this.nodes[`${randX}-${randY}`];
+    this.setNodeAsEnd(id);
     document.getElementById(this.endNode.id).classList.add("end");
   }
 
@@ -218,27 +211,13 @@ class Board {
       !this.isBlockWall(block)
     ) {
       if (this.nodes[this.draggedNodeId].status === "start") {
-        this.nodes[id].update({
-          status: "start",
-          dist: 0,
-          direction: directions["east"],
-        });
-        this.startNode = this.nodes[id];
+        this.setNodeAsStart(id);
       } else if (this.nodes[this.draggedNodeId].status === "end") {
-        this.nodes[id].update({
-          status: "end",
-          dist: Infinity,
-          direction: null,
-        });
-        this.endNode = this.nodes[id];
+        this.setNodeAsEnd(id);
       }
 
       // update the initially dragged node
-      this.nodes[this.draggedNodeId].update({
-        status: "block",
-        dist: Infinity,
-        direction: null,
-      });
+      this.setNodeAsBlock(this.draggedNodeId);
 
       this.isNodeDragged = false;
       this.draggedNodeId = null;
@@ -304,6 +283,32 @@ class Board {
     }
     this.setStartNode();
     this.setEndNode();
+  }
+
+  setNodeAsStart(nodeId) {
+    this.nodes[nodeId].update({
+      status: "start",
+      dist: 0,
+      direction: directions[this.startInitialDirection],
+    });
+    this.startNode = this.nodes[nodeId];
+  }
+
+  setNodeAsEnd(nodeId) {
+    this.nodes[nodeId].update({
+      status: "end",
+      dist: Infinity,
+      direction: null,
+    });
+    this.endNode = this.nodes[nodeId];
+  }
+
+  setNodeAsBlock(nodeId) {
+    this.nodes[nodeId].update({
+      status: "block",
+      dist: Infinity,
+      direction: null,
+    });
   }
 }
 

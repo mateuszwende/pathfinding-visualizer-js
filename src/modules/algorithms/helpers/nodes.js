@@ -31,7 +31,7 @@ export const getClosestNodeWithHeuristicDist = (unvisitedIds, nodes) => {
   let index = 0;
 
   unvisitedIds.forEach((id, i) => {
-    if (nodes[id]) {
+    if (nodes[id] && nodes[id].dist !== Infinity) {
       const nodeScore = nodes[id].dist + nodes[id].heuristicDistance;
       if (nodeScore < min) {
         min = nodeScore;
@@ -42,6 +42,10 @@ export const getClosestNodeWithHeuristicDist = (unvisitedIds, nodes) => {
   });
 
   unvisitedIds.splice(index, 1);
-
   return nodes[minHeuristicDistNodeId];
 };
+
+/**
+ * Returns true if nodes are at the same position
+ */
+export const isSameNode = (n1, n2) => n1.x === n2.x && n1.y === n2.y;

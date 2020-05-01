@@ -4,20 +4,30 @@
 }
 
 @keyframes animateVisitedNeighbor {
-  from {
+  0% {
     background-color: transparent;
-    clip-path: inset(50% round 50%);
+    transform: scale(0);
+
+    // clip-path: inset(70% round 70%);
   }
-  to {
+  40% {
+    background-color: lighten($neighbor-color, 15%);
+    transform: scale(0.5);
+  }
+  70% {
+    // clip-path: inset(30% round 30%);
+    transform: scale(0.7);
+  }
+  100% {
+    transform: scale(1);
     background-color: $neighbor-color;
-    clip-path: inset(0% round 0%);
   }
 }
 
 .neighbor {
   background-color: $neighbor-color;
   animation-name: animateVisitedNeighbor;
-  animation-duration: 1s;
+  animation-duration: 0.5s;
   animation-timing-function: ease-in-out;
 
   -webkit-transform: translate3d(0, 0, 0);
@@ -30,26 +40,28 @@
 @keyframes animateVisited {
   0% {
     background-color: transparent;
-    clip-path: inset(0% round 0%);
+    // clip-path: inset(0% round 0%);
+    transform: scale(0.6);
   }
   20% {
     background-color: $visited-third-color;
   }
   75% {
     background-color: $visited-second-color;
-    clip-path: inset(50% round 50%);
+    // clip-path: inset(50% round 50%);
+    transform: scale(1.2);
   }
   100% {
     background-color: $visited-main-color;
-    clip-path: inset(100% round 0%);
+    // clip-path: inset(100% round 0%);
+    transform: scale(1);
   }
 }
 
 .visited {
   background-color: $visited-main-color;
   animation-name: animateVisited;
-  animation-duration: 1s;
-  animation-direction: reverse;
+  animation-duration: 1.2s;
   animation-timing-function: linear;
 
   -webkit-transform: translate3d(0, 0, 0);
@@ -78,10 +90,8 @@
 
 .wall {
   background-color: $wall-color;
-  // transition: background-color 0.2s ease-in;
   animation-name: animateWall;
   animation-duration: 0.2s;
-  // animation-direction: reverse;
 
   animation-timing-function: ease-in-out;
   -webkit-transform: translate3d(0, 0, 0);
@@ -91,22 +101,23 @@
   transform: translate3d(0, 0, 0);
 }
 
-// @keyframes animatePath {
-//   0% {
-//     background-color: #621284;
-//   }
-//   100% {
-//     background-color: #ff8f03;
-//   }
-// }
+@keyframes animatePath {
+  0% {
+    background-color: #621284;
+    transform: scale(0.5);
+  }
+  100% {
+    background-color: #ff8f03;
+    transform: scale(1);
+  }
+}
 
 .path {
   background-color: $path-color;
-  // animation-name: animatePath;
-  // animation-duration: 0.2s;
-  // // animation-direction: reverse;
-  // animation-timing-function: ease-in;
-  transition: background-color 0.2s ease-in;
+  animation-name: animatePath;
+  animation-duration: 0.8s;
+  animation-timing-function: ease-in;
+  // transition: background-color 0.2s ease-in;
   -webkit-transform: translate3d(0, 0, 0);
   -moz-transform: translate3d(0, 0, 0);
   -ms-transform: translate3d(0, 0, 0);
@@ -115,13 +126,38 @@
 }
 
 .start {
-  background-image: url("../../images/arrow.svg");
-  background-position: center;
-  background-repeat: no-repeat;
+  width: 100%;
+  height: 100%;
+  position: relative;
+
+  &:before {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("../../images/arrow.svg");
+    background-position: unset;
+    background-repeat: no-repeat;
+  }
 }
 
 .end {
   background-image: url("../../images/aim.svg");
   background-position: center;
   background-repeat: no-repeat;
+}
+
+.north:before {
+  transform: rotate(-90deg);
+}
+
+.south:before {
+  transform: rotate(90deg);
+}
+
+.west:before {
+  transform: rotate(-180deg);
 }

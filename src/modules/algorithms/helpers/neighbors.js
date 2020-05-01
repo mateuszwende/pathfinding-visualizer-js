@@ -1,5 +1,5 @@
 /**
- * Get node neighbors's keys
+ * Get node neighbors's ids
  */
 export const getNeighborsIds = (unvisitedNodesIds, nodes, x, y) => {
   let arr = [];

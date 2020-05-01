@@ -1,24 +1,22 @@
-import asyncDelay from "../helpers/asyncDelay";
 import { getNeighborsIds } from "./helpers/neighbors";
-import { visualizePath } from "../helpers/visualizePath";
-import { getClosestNode } from "./helpers/nodes";
+import {
+  visualizePath,
+  visualizeVisitedNode,
+  visualizeNeighborNode,
+} from "../helpers/visualizer";
+import { getClosestNode, isSameNode } from "./helpers/nodes";
+import { asyncForEach } from "../helpers/asyncForEach";
 
 export const breadthFirst = async (nodes, start, end, speed) => {
   let unvisitedNodesIds = Object.keys(nodes);
-
   let visitedNodes = {};
   let foundEnd = false;
-  const isSameNode = (n1, n2) => n1.x === n2.x && n1.y === n2.y;
 
   while (unvisitedNodesIds.length) {
     const currNode = getClosestNode(unvisitedNodesIds, nodes);
-    // VISUALIZE
-    document.getElementById(currNode.id).classList.add("visited");
-    await asyncDelay(speed);
+    if (!currNode) break;
 
-    if (!currNode) {
-      break;
-    }
+    await visualizeVisitedNode(currNode.id, speed);
 
     visitedNodes[currNode.id] = currNode;
 
@@ -27,23 +25,23 @@ export const breadthFirst = async (nodes, start, end, speed) => {
       break;
     }
 
-    getNeighborsIds(unvisitedNodesIds, nodes, currNode.x, currNode.y).forEach(
-      (neighborId) => {
-        const isNeighborFurtherFromStart =
-          currNode.dist < nodes[neighborId].dist;
-
-        if (isNeighborFurtherFromStart) {
-          // VISUALIZE
-          document
-            .getElementById(nodes[neighborId].id)
-            .classList.replace("unvisited", "neighbor");
-          nodes[neighborId].dist = currNode.dist + 1;
-          if (!nodes[neighborId].prevId) {
-            nodes[neighborId].prevId = currNode.id;
-          }
-        }
-      }
+    const neighborsIds = getNeighborsIds(
+      unvisitedNodesIds,
+      nodes,
+      currNode.x,
+      currNode.y
     );
+
+    await asyncForEach(neighborsIds, (neighborId) => {
+      const isNeighborFurtherFromStart = currNode.dist < nodes[neighborId].dist;
+
+      if (isNeighborFurtherFromStart) {
+        visualizeNeighborNode(neighborId, speed);
+
+        nodes[neighborId].dist = currNode.dist + 1;
+        nodes[neighborId].prevId = currNode.id;
+      }
+    });
   }
 
   if (foundEnd) {
