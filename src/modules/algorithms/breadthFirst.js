@@ -33,14 +33,15 @@ export const breadthFirst = async (nodes, start, end, speed) => {
           currNode.dist < nodes[neighborId].dist;
 
         if (isNeighborFurtherFromStart) {
+          // VISUALIZE
+          document
+            .getElementById(nodes[neighborId].id)
+            .classList.replace("unvisited", "neighbor");
           nodes[neighborId].dist = currNode.dist + 1;
-          nodes[neighborId].prevId = currNode.id;
+          if (!nodes[neighborId].prevId) {
+            nodes[neighborId].prevId = currNode.id;
+          }
         }
-
-        // VISUALIZE
-        document
-          .getElementById(nodes[neighborId].id)
-          .classList.replace("unvisited", "neighbor");
       }
     );
   }

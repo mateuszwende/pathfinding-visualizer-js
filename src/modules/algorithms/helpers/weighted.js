@@ -16,6 +16,17 @@ const directionsName = ["north", "east", "south", "west"];
 export const getDirectionName = (index) => directionsName[index];
 
 /**
+ * weights of turns calc by degrees
+ */
+export const weightTurn_90 = 1;
+export const weightTurn_180 = 2;
+
+/**
+ * weight of move
+ */
+export const moveWeight = 1;
+
+/**
  * Node can be directed into 4 directions - north, east, south and west
  * The array represents the weight of choosing the next direction
  * 90 degree turn costs 1 points
@@ -24,12 +35,42 @@ export const getDirectionName = (index) => directionsName[index];
  * [2] - go south weight
  * [3] - go west weight
  */
-export const northDirectionWeights = [0, 1, 2, 1];
-export const eastDirectionWeights = [1, 0, 1, 2];
-export const southDirectionWeights = [2, 1, 0, 1];
-export const westDirectionWeights = [1, 2, 1, 0];
+export const northDirectionWeights = [
+  0,
+  weightTurn_90,
+  weightTurn_180,
+  weightTurn_90,
+];
+export const eastDirectionWeights = [
+  weightTurn_90,
+  0,
+  weightTurn_90,
+  weightTurn_180,
+];
+export const southDirectionWeights = [
+  weightTurn_180,
+  weightTurn_90,
+  0,
+  weightTurn_90,
+];
+export const westDirectionWeights = [
+  weightTurn_90,
+  weightTurn_180,
+  weightTurn_90,
+  0,
+];
 
-export const moveWeight = 1;
+export const getDirectionWeightsBasedOnCurrDirection = (currDirection) => {
+  if (currDirection === 0) {
+    return northDirectionWeights;
+  } else if (currDirection === 1) {
+    return eastDirectionWeights;
+  } else if (currDirection === 2) {
+    return southDirectionWeights;
+  } else if (currDirection === 3) {
+    return westDirectionWeights;
+  }
+};
 
 /**
  * Get distance between two nodes based on the weight
@@ -72,4 +113,52 @@ export const getNodeDirection = (node_1, node_2) => {
   } else {
     throw new Error("Something went wrong when setting the direction of node.");
   }
+};
+
+export const getWeightedManhattanDistance = (node, end) => {
+  const xDiff = Math.abs(node.x - end.x);
+  const yDiff = Math.abs(node.y - end.y);
+  let add = 0;
+  const weights = getDirectionWeightsBasedOnCurrDirection(node.direction);
+
+  // end is
+  // on north
+  if (node.y < end.y) {
+    // north-west - at least 180 deg turn
+    add += weights[0];
+    if (node.x < end.x) {
+      add += weights[1];
+    } else if (node.x > end.x) {
+      add += weights[3];
+    }
+  } else if (node.y > end.y) {
+    add += weights[2];
+    if (node.x < end.x) {
+      add += weights[1];
+    } else if (node.x > end.x) {
+      add += weights[3];
+    }
+  }
+  // // on
+  // else if (node.x < end.x) {
+  //   if (node.y < end.y || node.y > end.y) {
+  //     add = 2;
+  //   } else {
+  //     add = 1;
+  //   }
+  // } else if (node.y > end.y) {
+  //   if (node.x < end.x || node.x > end.x) {
+  //     add = 2;
+  //   } else {
+  //     add = 1;
+  //   }
+  // } else if (node.x > end.x) {
+  //   if (node.y < end.y || node.y > end.y) {
+  //     add = 2;
+  //   } else {
+  //     add = 1;
+  //   }
+  // }
+
+  return xDiff + yDiff + add;
 };

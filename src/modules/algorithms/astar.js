@@ -1,18 +1,26 @@
 import asyncDelay from "../helpers/asyncDelay";
-import { getDistanceBetweenNodes, getNodeDirection } from "./helpers/weighted";
+import {
+  getDistanceBetweenNodes,
+  getNodeDirection,
+  getWeightedManhattanDistance,
+} from "./helpers/weighted";
 import { getNeighborsIds } from "./helpers/neighbors";
 import { visualizePath } from "../helpers/visualizePath";
-import { getClosestNode } from "./helpers/nodes";
+import { getClosestNodeWithHeuristicDist } from "./helpers/nodes";
 
-export const dijkstra = async (nodes, start, end, speed) => {
+export const astar = async (nodes, start, end, speed) => {
   let unvisitedNodesIds = Object.keys(nodes);
 
   let visitedNodes = {};
   let foundEnd = false;
   const isSameNode = (n1, n2) => n1.x === n2.x && n1.y === n2.y;
 
+  nodes[`${start.x}-${start.y}`].update({
+    heuristicDistance: getWeightedManhattanDistance(start, end),
+  });
+
   while (unvisitedNodesIds.length) {
-    const currNode = getClosestNode(unvisitedNodesIds, nodes);
+    const currNode = getClosestNodeWithHeuristicDist(unvisitedNodesIds, nodes);
     // VISUALIZE
     document.getElementById(currNode.id).classList.add("visited");
     await asyncDelay(speed);
@@ -39,15 +47,21 @@ export const dijkstra = async (nodes, start, end, speed) => {
           currNode.dist + distanceBetweenNodes < nodes[neighborId].dist;
 
         if (isNeighborFurtherFromStart) {
+          // VISUALIZE
           document
             .getElementById(nodes[neighborId].id)
             .classList.add("neighbor");
+
           nodes[neighborId].dist = currNode.dist + distanceBetweenNodes;
-          nodes[neighborId].prevId = currNode.id;
           nodes[neighborId].direction = getNodeDirection(
             currNode,
             nodes[neighborId]
           );
+          nodes[neighborId].heuristicDistance = getWeightedManhattanDistance(
+            nodes[neighborId],
+            end
+          );
+          nodes[neighborId].prevId = currNode.id;
         }
       }
     );

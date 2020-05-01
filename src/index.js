@@ -3,6 +3,7 @@ import Board from "./modules/Board";
 import { dijkstra } from "./modules/algorithms/dijkstra";
 import { breadthFirst } from "./modules/algorithms/breadthFirst";
 import { depthFirst } from "./modules/algorithms/depthFirst";
+import { astar } from "./modules/algorithms/astar";
 
 const pathfindingAlgorithms = {
   dijkstra: {
@@ -16,6 +17,10 @@ const pathfindingAlgorithms = {
   dfs: {
     name: "Depth-First Search",
     func: depthFirst,
+  },
+  astar: {
+    name: "A* Search",
+    func: astar,
   },
 };
 

@@ -7,6 +7,8 @@ class Node {
     this.dist = dist;
     this.prevId = prevId;
     this.direction = direction;
+    this.heuristicDistance = null;
+
     this.update = this.update.bind(this);
   }
 
