@@ -1,8 +1,9 @@
 import { createBlock } from "./helpers/block";
 import { getRandomNum } from "./helpers/getRandomNum";
 import { getDifferentRandomNum } from "./helpers/getDifferentRandomNum";
-import Node from "./Node";
 import { directions, getDirectionName } from "./algorithms/helpers/weighted";
+import updateObject from "./helpers/updateObject";
+import { createNode } from "./node/operations";
 
 class Board {
   constructor(boardId, blockSize, algorithms) {
@@ -12,7 +13,7 @@ class Board {
     this.height = null;
     this.nodes = {};
     this.startNode = null;
-    this.startInitialDirection = "north";
+    this.startDirection = "north";
     this.endNode = null;
     this.isMakingWalls = false;
     this.isNodeDragged = false;
@@ -25,14 +26,15 @@ class Board {
   }
 
   initialize() {
+    this.setCurrentAlgorithm("bfs");
+
     this.createNav();
     this.calculateBoardSize();
     this.createBoard();
-    this.setStartNode();
-    this.setEndNode();
+    this.createStartNode();
+    this.createEndNode();
 
-    this.setCurrentAlgorithm("dijkstra");
-
+    this.setInitialActiveNavAlgorithm();
     this.addNavAlgoElemsEventListeners();
     this.addBlocksEventListeners();
     this.addBtnsEventListeners();
@@ -50,6 +52,8 @@ class Board {
     this.height = Math.floor(pxHeight / this.blockSize);
   }
 
+  // HTML ELEMENTS
+
   createBoard() {
     const board = document.getElementById(this.boardId);
     const tbody = document.createElement("tbody");
@@ -58,13 +62,10 @@ class Board {
       const row = document.createElement("tr");
       for (let x = 0; x < this.width; x++) {
         createBlock(row, this.blockSize, x, y);
-
-        const newNode = new Node("block", x, y, Infinity, null, null);
-        this.nodes[newNode.id] = newNode;
+        this.nodes[`${x}-${y}`] = createNode(x, y, this.currentAlgorithm);
       }
       tbody.appendChild(row);
     }
-
     board.appendChild(tbody);
   }
 
@@ -79,31 +80,61 @@ class Board {
     }
   }
 
-  setCurrentAlgorithm(algo) {
-    this.currentAlgorithm = this.algorithms[algo].func;
+  // AlGORITHM
+
+  setInitialActiveNavAlgorithm() {
     const elems = document.querySelectorAll(".nav-algorithm-js");
     elems[0].classList.add("active");
   }
 
-  setStartNode() {
+  setCurrentAlgorithm(algo) {
+    this.currentAlgorithm = this.algorithms[algo];
+  }
+
+  // NODES
+
+  createStartNode() {
     const randX = getRandomNum(0, this.width - 1);
     const randY = getRandomNum(0, this.height - 1);
     const id = `${randX}-${randY}`;
 
-    this.setNodeAsStart(id);
+    this.setStartNode(id);
     document
       .getElementById(this.startNode.id)
-      .classList.add("start", this.startInitialDirection);
+      .classList.add("start", this.startDirection);
   }
 
-  setEndNode() {
+  createEndNode() {
     const randX = getDifferentRandomNum(0, this.width - 1, this.startNode.x);
     const randY = getDifferentRandomNum(0, this.height - 1, this.startNode.y);
     const id = `${randX}-${randY}`;
 
-    this.setNodeAsEnd(id);
+    this.setEndNode(id);
     document.getElementById(this.endNode.id).classList.add("end");
   }
+
+  setStartNode(nodeId) {
+    updateObject(this.nodes[nodeId], {
+      status: "start",
+      dist: 0,
+      direction: this.startDirection ? directions[this.startDirection] : null,
+    });
+    this.startNode = this.nodes[nodeId];
+  }
+
+  setEndNode(nodeId) {
+    updateObject(this.nodes[nodeId], {
+      status: "end",
+      dist: Infinity,
+    });
+    this.endNode = this.nodes[nodeId];
+  }
+
+  resetNodeToInitial(nodeId) {
+    updateObject(this.nodes[nodeId], this.currentAlgorithm.node.initialValues);
+  }
+
+  // EVENTS HANDLERS
 
   addNavAlgoElemsEventListeners() {
     const elems = document.querySelectorAll(".nav-algorithm-js");
@@ -115,9 +146,9 @@ class Board {
 
         elems.forEach((elem) => elem.classList.remove("active"));
         e.target.classList.add("active");
-        this.currentAlgorithm = this.algorithms[
-          e.target.dataset.algorithmKey
-        ].func;
+
+        this.currentAlgorithm = this.algorithms[e.target.dataset.algorithmKey];
+        this.resetNodes();
       });
     });
   }
@@ -131,7 +162,7 @@ class Board {
         this.handleIsSearchingState(true);
         this.handleIsPreparedState(false);
 
-        await this.currentAlgorithm(
+        await this.currentAlgorithm.func(
           this.nodes,
           this.startNode,
           this.endNode,
@@ -180,7 +211,7 @@ class Board {
     if (!this.isNodeBlock(id)) {
       this.draggedNodeId = id;
       this.isNodeDragged = true;
-    } else if (!this.isNodeDragged) {
+    } else if (!this.isNodeDragged && this.isNodeBlock(id)) {
       this.createWall(block);
       this.setMakingWallsState(true);
     }
@@ -190,8 +221,10 @@ class Board {
     if (this.isNodeDragged && !this.isBlockWall(block)) {
       const draggedNode = this.nodes[this.draggedNodeId];
       if (draggedNode.status === "start" && !block.classList.contains("end")) {
-        const directionName = getDirectionName(draggedNode.direction);
-        block.classList.add("start", directionName);
+        block.classList.add(
+          "start",
+          this.startDirection ? this.startDirection : ""
+        );
       } else if (
         draggedNode.status === "end" &&
         !block.classList.contains("start")
@@ -207,17 +240,15 @@ class Board {
     const id = block.id;
     if (
       this.isNodeDragged &&
-      id !== this.draggedNodeId &&
-      !this.isBlockWall(block)
+      !this.isBlockWall(block) &&
+      this.draggedNodeId !== id
     ) {
       if (this.nodes[this.draggedNodeId].status === "start") {
-        this.setNodeAsStart(id);
+        this.setStartNode(id);
       } else if (this.nodes[this.draggedNodeId].status === "end") {
-        this.setNodeAsEnd(id);
+        this.setEndNode(id);
       }
-
-      // update the initially dragged node
-      this.setNodeAsBlock(this.draggedNodeId);
+      this.resetNodeToInitial(this.draggedNodeId);
 
       this.isNodeDragged = false;
       this.draggedNodeId = null;
@@ -230,29 +261,31 @@ class Board {
     if (this.isNodeDragged) {
       const draggedNode = this.nodes[this.draggedNodeId];
       if (draggedNode.status === "start") {
-        const directionName = getDirectionName(draggedNode.direction);
-        block.classList.remove("start", directionName);
+        block.classList.remove(
+          "start",
+          this.startDirection ? this.startDirection : ""
+        );
       } else if (draggedNode.status === "end") {
         block.classList.remove("end");
       }
     }
   }
 
-  //
   isNodeBlock(id) {
     return !(
       this.nodes[id].status === "start" || this.nodes[id].status === "end"
     );
   }
 
-  // WALLS
   createWall(block) {
-    window.requestAnimationFrame(() => block.classList.add("wall"));
+    block.classList.add("wall");
   }
 
   isBlockWall(block) {
     return block.classList.contains("wall");
   }
+
+  // STATE SETTERS
 
   setMakingWallsState(bool) {
     this.isMakingWalls = bool;
@@ -271,44 +304,30 @@ class Board {
   clearBoard() {
     for (let y = this.height - 1; y >= 0; y--) {
       for (let x = 0; x < this.width; x++) {
-        this.nodes[`${x}-${y}`].update({
-          status: "block",
-          dist: Infinity,
-          prevId: null,
-          direction: null,
-        });
+        const id = `${x}-${y}`;
+        this.resetNodeToInitial(id);
+
         document.getElementById(`${x}-${y}`).classList = [];
         document.getElementById(`${x}-${y}`).classList.add("unvisited");
       }
     }
-    this.setStartNode();
-    this.setEndNode();
+    this.createStartNode();
+    this.createEndNode();
   }
 
-  setNodeAsStart(nodeId) {
-    this.nodes[nodeId].update({
-      status: "start",
-      dist: 0,
-      direction: directions[this.startInitialDirection],
-    });
-    this.startNode = this.nodes[nodeId];
-  }
+  resetNodes() {
+    const currStartNodeId = this.startNode.id;
+    const currEndNodeId = this.endNode.id;
+    this.nodes = {};
 
-  setNodeAsEnd(nodeId) {
-    this.nodes[nodeId].update({
-      status: "end",
-      dist: Infinity,
-      direction: null,
-    });
-    this.endNode = this.nodes[nodeId];
-  }
-
-  setNodeAsBlock(nodeId) {
-    this.nodes[nodeId].update({
-      status: "block",
-      dist: Infinity,
-      direction: null,
-    });
+    for (let y = this.height - 1; y >= 0; y--) {
+      for (let x = 0; x < this.width; x++) {
+        const id = `${x}-${y}`;
+        this.nodes[id] = createNode(x, y, this.currentAlgorithm);
+      }
+    }
+    this.setStartNode(currStartNodeId);
+    this.setEndNode(currEndNodeId);
   }
 }
 

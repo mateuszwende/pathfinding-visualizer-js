@@ -63,10 +63,6 @@ export const astar = async (nodes, start, end, speed) => {
         nodes[neighborId].prevId = currNode.id;
       }
     });
-
-    // neighborsIds.forEach((neighborId) => {
-
-    // });
   }
 
   if (foundEnd) {
