@@ -32,7 +32,7 @@ export const depthFirst = async (nodes, start, end, speed) => {
     await asyncForEach(neighborsIds, (id) => search(nodes[id], currNode.id));
   };
 
-  await search(nodes[`${start.x}-${start.y}`]);
+  await search(nodes[start.id]);
 
   if (foundEnd) {
     visualizePath(visitedNodes, start, end, speed);

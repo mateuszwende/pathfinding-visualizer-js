@@ -3,3 +3,10 @@ export const NODE_TYPE = {
   WEIGHTED: "WEIGHTED",
   HEURISTIC: "HEURISTIC",
 };
+
+export const NODE_STATUS = {
+  BLOCK: "block",
+  START: "start",
+  END: "end",
+  WALL: "wall",
+};

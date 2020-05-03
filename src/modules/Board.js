@@ -1,33 +1,43 @@
 import { createBlock } from "./helpers/block";
 import { getRandomNum } from "./helpers/getRandomNum";
 import { getDifferentRandomNum } from "./helpers/getDifferentRandomNum";
-import { directions, getDirectionName } from "./algorithms/helpers/weighted";
+import { directions } from "./algorithms/helpers/weighted";
 import updateObject from "./helpers/updateObject";
-import { createNode } from "./node/operations";
+import {
+  createNode,
+  isNodeBlock,
+  isNodeWall,
+  isNodeStart,
+  isNodeEnd,
+} from "./node/operations";
+import EventsHandler from "./events-handler/EventsHandler";
+import { hasClass, removeClass, $, addClass } from "./helpers/dom";
+import { CSS_CLASS, CSS_ID } from "./constants";
+import { NODE_STATUS } from "./node/types";
 
 class Board {
-  constructor(boardId, blockSize, algorithms) {
+  constructor({ boardId, blockSize, speed, algorithms, initialAlgorithm }) {
     this.boardId = boardId;
     this.blockSize = blockSize;
     this.width = null;
     this.height = null;
     this.nodes = {};
     this.startNode = null;
-    this.startDirection = "north";
+    this.startDirection = "east";
     this.endNode = null;
-    this.isMakingWalls = false;
     this.isNodeDragged = false;
-    this.draggedNodeClassList = null;
-    this.algorithms = algorithms;
-    this.currentAlgorithm = null;
-    this.speed = 40;
+
     this.isSearching = false;
     this.isPrepared = false;
+    this.isMakingWalls = false;
+    this.isNodeDragged = false;
+    this.draggedNodeId = null;
+    this.speed = speed || 10;
+    this.algorithms = algorithms || null;
+    this.currentAlgorithm = initialAlgorithm || null;
   }
 
   initialize() {
-    this.setCurrentAlgorithm("bfs");
-
     this.createNav();
     this.calculateBoardSize();
     this.createBoard();
@@ -39,8 +49,23 @@ class Board {
     this.addBlocksEventListeners();
     this.addBtnsEventListeners();
 
+    EventsHandler.addNavEventListeners(this.handleNavItemOnClick.bind(this));
+
     console.log(this);
     this.isPrepared = true;
+  }
+
+  handleNavItemOnClick(e) {
+    const target = e.target;
+    if (hasClass(target, CSS_CLASS.BLOCKED)) return;
+
+    $.all(`.${CSS_CLASS.NAVIGATION_ITEM}`).forEach((item) =>
+      removeClass(item, CSS_CLASS.ACTIVE)
+    );
+    addClass(target, CSS_CLASS.ACTIVE);
+
+    this.setCurrentAlgorithm(target.dataset.algorithmKey);
+    this.resetNodes();
   }
 
   calculateBoardSize() {
@@ -51,8 +76,6 @@ class Board {
     this.width = Math.floor(pxWidth / this.blockSize);
     this.height = Math.floor(pxHeight / this.blockSize);
   }
-
-  // HTML ELEMENTS
 
   createBoard() {
     const board = document.getElementById(this.boardId);
@@ -70,28 +93,20 @@ class Board {
   }
 
   createNav() {
-    const nav = document.getElementById("nav");
+    const nav = document.getElementById(CSS_ID.NAVIGATION);
     for (let [key, algo] of Object.entries(this.algorithms)) {
       const elem = document.createElement("div");
-      elem.classList.add("nav-algorithm-js");
+      addClass(elem, CSS_CLASS.NAVIGATION_ITEM);
       elem.innerText = algo.name;
       elem.dataset.algorithmKey = key;
       nav.appendChild(elem);
     }
   }
 
-  // AlGORITHM
-
   setInitialActiveNavAlgorithm() {
-    const elems = document.querySelectorAll(".nav-algorithm-js");
-    elems[0].classList.add("active");
+    const elems = document.querySelectorAll(`.${CSS_CLASS.NAVIGATION_ITEM}`);
+    elems[0].classList.add(CSS_CLASS.ACTIVE);
   }
-
-  setCurrentAlgorithm(algo) {
-    this.currentAlgorithm = this.algorithms[algo];
-  }
-
-  // NODES
 
   createStartNode() {
     const randX = getRandomNum(0, this.width - 1);
@@ -99,9 +114,11 @@ class Board {
     const id = `${randX}-${randY}`;
 
     this.setStartNode(id);
-    document
-      .getElementById(this.startNode.id)
-      .classList.add("start", this.startDirection);
+    const block = document.getElementById(this.startNode.id);
+    addClass(block, NODE_STATUS.START);
+    if (this.startDirection) {
+      addClass(block, this.startDirection);
+    }
   }
 
   createEndNode() {
@@ -110,12 +127,13 @@ class Board {
     const id = `${randX}-${randY}`;
 
     this.setEndNode(id);
-    document.getElementById(this.endNode.id).classList.add("end");
+    const block = document.getElementById(this.endNode.id);
+    addClass(block, NODE_STATUS.END);
   }
 
   setStartNode(nodeId) {
     updateObject(this.nodes[nodeId], {
-      status: "start",
+      status: NODE_STATUS.START,
       dist: 0,
       direction: this.startDirection ? directions[this.startDirection] : null,
     });
@@ -124,7 +142,7 @@ class Board {
 
   setEndNode(nodeId) {
     updateObject(this.nodes[nodeId], {
-      status: "end",
+      status: NODE_STATUS.END,
       dist: Infinity,
     });
     this.endNode = this.nodes[nodeId];
@@ -134,54 +152,32 @@ class Board {
     updateObject(this.nodes[nodeId], this.currentAlgorithm.node.initialValues);
   }
 
-  // EVENTS HANDLERS
-
   addNavAlgoElemsEventListeners() {
-    const elems = document.querySelectorAll(".nav-algorithm-js");
+    const elems = document.querySelectorAll(`.${CSS_CLASS.NAVIGATION_ITEM}`);
 
     elems.forEach((elem) => {
       elem.addEventListener("click", (e) => {
-        const isBlocked = e.target.classList.contains("blocked");
-        if (isBlocked) return;
+        if (hasClass(e.target, CSS_CLASS.BLOCKED)) return;
 
-        elems.forEach((elem) => elem.classList.remove("active"));
-        e.target.classList.add("active");
+        elems.forEach((elem) => elem.classList.remove(CSS_CLASS.ACTIVE));
+        e.target.classList.add(CSS_CLASS.ACTIVE);
 
-        this.currentAlgorithm = this.algorithms[e.target.dataset.algorithmKey];
+        this.setCurrentAlgorithm(e.target.dataset.algorithmKey);
         this.resetNodes();
       });
     });
   }
 
   addBtnsEventListeners() {
-    const startBtn = document.getElementById("startBtn");
-    const clearBtn = document.getElementById("clearBtn");
+    const startBtn = document.getElementById(CSS_ID.START_BTN);
+    const clearBtn = document.getElementById(CSS_ID.CLEAR_BTN);
 
-    startBtn.addEventListener("click", async (e) => {
-      if (this.isPrepared) {
-        this.handleIsSearchingState(true);
-        this.handleIsPreparedState(false);
-
-        await this.currentAlgorithm.func(
-          this.nodes,
-          this.startNode,
-          this.endNode,
-          this.speed
-        );
-        this.handleIsSearchingState(false);
-      }
-    });
-
-    clearBtn.addEventListener("click", (e) => {
-      if (!this.isSearching) {
-        this.clearBoard();
-        this.handleIsPreparedState(true);
-      }
-    });
+    startBtn.addEventListener("click", (e) => this.handleStart(e));
+    clearBtn.addEventListener("click", (e) => this.handleClear(e));
   }
 
   addBlocksEventListeners() {
-    const blocks = document.querySelectorAll(".unvisited");
+    const blocks = document.querySelectorAll(`.${CSS_CLASS.UNVISITED}`);
 
     blocks.forEach((block) => {
       block.addEventListener("mousedown", (e) => {
@@ -206,32 +202,51 @@ class Board {
     });
   }
 
+  async handleStart(e) {
+    if (this.isPrepared) {
+      this.handleIsSearchingState(true);
+      this.handleIsPreparedState(false);
+
+      await this.currentAlgorithm.func(
+        this.nodes,
+        this.startNode,
+        this.endNode,
+        this.speed
+      );
+      this.handleIsSearchingState(false);
+    }
+  }
+
+  handleClear(e) {
+    if (!this.isSearching) {
+      this.clearBoard();
+      this.handleIsPreparedState(true);
+    }
+  }
+
   handleMouseDown(block) {
     const id = block.id;
-    if (!this.isNodeBlock(id)) {
+    if (!isNodeBlock(this.nodes[id])) {
       this.draggedNodeId = id;
       this.isNodeDragged = true;
-    } else if (!this.isNodeDragged && this.isNodeBlock(id)) {
+    } else if (!this.isNodeDragged && isNodeBlock(this.nodes[id])) {
       this.createWall(block);
-      this.setMakingWallsState(true);
+      this.isMakingWalls = true;
     }
   }
 
   handleMouseEnter(block) {
-    if (this.isNodeDragged && !this.isBlockWall(block)) {
+    const id = block.id;
+    if (this.isNodeDragged && isNodeBlock(this.nodes[id])) {
       const draggedNode = this.nodes[this.draggedNodeId];
-      if (draggedNode.status === "start" && !block.classList.contains("end")) {
-        block.classList.add(
-          "start",
-          this.startDirection ? this.startDirection : ""
-        );
-      } else if (
-        draggedNode.status === "end" &&
-        !block.classList.contains("start")
-      ) {
-        block.classList.add("end");
+      const status = draggedNode.status;
+      addClass(block, status);
+
+      if (isNodeStart(draggedNode)) {
+        const direction = this.startDirection ? this.startDirection : "";
+        addClass(block, direction);
       }
-    } else if (this.isMakingWalls && this.isNodeBlock(block.id)) {
+    } else if (this.isMakingWalls && isNodeBlock(this.nodes[id])) {
       this.createWall(block);
     }
   }
@@ -240,12 +255,13 @@ class Board {
     const id = block.id;
     if (
       this.isNodeDragged &&
-      !this.isBlockWall(block) &&
+      !isNodeWall(this.nodes[id]) &&
       this.draggedNodeId !== id
     ) {
-      if (this.nodes[this.draggedNodeId].status === "start") {
+      const draggedNode = this.nodes[this.draggedNodeId];
+      if (isNodeStart(draggedNode)) {
         this.setStartNode(id);
-      } else if (this.nodes[this.draggedNodeId].status === "end") {
+      } else if (isNodeEnd(draggedNode)) {
         this.setEndNode(id);
       }
       this.resetNodeToInitial(this.draggedNodeId);
@@ -253,52 +269,38 @@ class Board {
       this.isNodeDragged = false;
       this.draggedNodeId = null;
     } else {
-      this.setMakingWallsState(false);
+      this.isMakingWalls = false;
     }
   }
 
   handleMouseLeave(block) {
     if (this.isNodeDragged) {
       const draggedNode = this.nodes[this.draggedNodeId];
-      if (draggedNode.status === "start") {
-        block.classList.remove(
-          "start",
-          this.startDirection ? this.startDirection : ""
-        );
-      } else if (draggedNode.status === "end") {
-        block.classList.remove("end");
+      removeClass(block, draggedNode.status);
+
+      if (isNodeStart(draggedNode)) {
+        const direction = this.startDirection ? this.startDirection : "";
+        removeClass(block, direction);
       }
     }
   }
 
-  isNodeBlock(id) {
-    return !(
-      this.nodes[id].status === "start" || this.nodes[id].status === "end"
-    );
-  }
-
   createWall(block) {
-    block.classList.add("wall");
+    addClass(block, CSS_CLASS.WALL);
   }
 
-  isBlockWall(block) {
-    return block.classList.contains("wall");
-  }
-
-  // STATE SETTERS
-
-  setMakingWallsState(bool) {
-    this.isMakingWalls = bool;
+  setCurrentAlgorithm(algoKey) {
+    this.currentAlgorithm = algoKey ? this.algorithms[algoKey] : null;
   }
 
   handleIsSearchingState(isSearching) {
     this.isSearching = isSearching;
-    document.getElementById("clearBtn").disabled = isSearching;
+    document.getElementById(CSS_ID.CLEAR_BTN).disabled = isSearching;
   }
 
   handleIsPreparedState(isPrepared) {
     this.isPrepared = isPrepared;
-    document.getElementById("startBtn").disabled = !isPrepared;
+    document.getElementById(CSS_ID.START_BTN).disabled = !isPrepared;
   }
 
   clearBoard() {
@@ -308,7 +310,7 @@ class Board {
         this.resetNodeToInitial(id);
 
         document.getElementById(`${x}-${y}`).classList = [];
-        document.getElementById(`${x}-${y}`).classList.add("unvisited");
+        document.getElementById(`${x}-${y}`).classList.add(CSS_CLASS.UNVISITED);
       }
     }
     this.createStartNode();
