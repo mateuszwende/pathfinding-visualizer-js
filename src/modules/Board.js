@@ -46,6 +46,7 @@ class Board {
     this.isMakingWalls = false;
     this.isNodeDragged = false;
     this.draggedNodeId = null;
+    this.isAlgorithmChanged = false;
     this.algorithms = algorithms || null;
     this.currentAlgorithm = initialAlgorithm || null;
 
@@ -79,6 +80,7 @@ class Board {
     addClass(target, CSS_CLASS.ACTIVE);
 
     this.setCurrentAlgorithm(target.dataset.algorithmKey);
+    this.isAlgorithmChanged = true;
     this.recreateNodes();
   }
 
@@ -194,25 +196,25 @@ class Board {
 
     blocks.forEach((block) => {
       block.addEventListener("mousedown", (e) => {
-        if (e.which === 1) {
-          e.preventDefault();
+        e.preventDefault();
+        if (e.which === 1 && !this.isSearching) {
           this.handleMouseDown(block);
         }
       });
 
       block.addEventListener("mouseenter", (e) => {
         e.preventDefault();
-        this.handleMouseEnter(block);
+        if (!this.isSearching) this.handleMouseEnter(block);
       });
 
       block.addEventListener("mouseup", (e) => {
         e.preventDefault();
-        this.handleMouseUp(block);
+        if (!this.isSearching) this.handleMouseUp(block);
       });
 
       block.addEventListener("mouseleave", (e) => {
         e.preventDefault();
-        this.handleMouseLeave(block);
+        if (!this.isSearching) this.handleMouseLeave(block);
       });
     });
   }
@@ -271,6 +273,11 @@ class Board {
     $.id(CSS_ID.CLEAR_BTN).disabled = true;
     $.id(CSS_ID.CLEAR_WALLS_BTN).disabled = true;
     $.id(CSS_ID.START_BTN).disabled = true;
+    const elems = document.querySelectorAll(`.${CSS_CLASS.NAVIGATION_ITEM}`);
+
+    elems.forEach((elem) => {
+      elem.classList.add(CSS_CLASS.BLOCKED);
+    });
   }
 
   handleSearchStateEnd() {
@@ -301,7 +308,6 @@ class Board {
 
   handleMouseDown(block) {
     const id = block.id;
-
     if (
       !isNodeUnvisited(this.nodes[id]) &&
       !isNodeWall(this.nodes[id]) &&
