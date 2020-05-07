@@ -161,3 +161,19 @@
 .west:before {
   transform: rotate(-180deg);
 }
+
+.no-animate {
+  animation: none;
+}
+
+.instant-neighbor {
+  background-color: $neighbor-color;
+}
+
+.instant-visited {
+  background-color: $visited-main-color;
+}
+
+.instant-path {
+  background-color: $path-color;
+}

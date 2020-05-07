@@ -11,3 +11,4 @@ export function $() {}
 
 $ = (identifer) => document.querySelector(identifer);
 $.all = (identifer) => document.querySelectorAll(identifer);
+$.id = (identifer) => document.getElementById(identifer);

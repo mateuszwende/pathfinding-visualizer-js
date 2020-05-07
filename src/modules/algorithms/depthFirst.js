@@ -1,20 +1,22 @@
 import { getNeighborsIds } from "./helpers/neighbors";
-import { visualizePath, visualizeVisitedNode } from "../helpers/visualizer";
 import { isSameNode } from "./helpers/nodes";
-import { asyncForEach } from "../helpers/asyncForEach";
+import { NODE_STATUS } from "../node/types";
+import { createPath } from "./helpers/createPath";
 
-export const depthFirst = async (nodes, start, end, speed) => {
+export const depthFirst = (nodes, start, end, speed) => {
   let unvisitedNodesIds = Object.keys(nodes);
   let visitedNodes = {};
+  let nodesToAnimate = [];
   let foundEnd = false;
 
-  const search = async (currNode, prevId) => {
+  const search = (currNode, prevId) => {
     if (!currNode) return;
     if (foundEnd) return;
-    await visualizeVisitedNode(currNode.id);
 
     currNode.prevId = prevId;
+    currNode.status = NODE_STATUS.VISITED;
     visitedNodes[currNode.id] = currNode;
+    nodesToAnimate.push(currNode);
     unvisitedNodesIds = unvisitedNodesIds.filter((id) => id !== currNode.id);
 
     if (isSameNode(currNode, end)) {
@@ -29,12 +31,10 @@ export const depthFirst = async (nodes, start, end, speed) => {
       currNode.y
     );
 
-    await asyncForEach(neighborsIds, (id) => search(nodes[id], currNode.id));
+    neighborsIds.forEach((id) => search(nodes[id], currNode.id));
   };
 
-  await search(nodes[start.id]);
+  search(nodes[start.id]);
 
-  if (foundEnd) {
-    visualizePath(visitedNodes, start, end, speed);
-  }
+  return [nodesToAnimate, createPath(visitedNodes, start, end, foundEnd)];
 };

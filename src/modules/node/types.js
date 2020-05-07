@@ -5,8 +5,10 @@ export const NODE_TYPE = {
 };
 
 export const NODE_STATUS = {
-  BLOCK: "block",
   START: "start",
   END: "end",
   WALL: "wall",
+  VISITED: "visited",
+  UNVISITED: "unvisited",
+  NEIGHBOR: "neighbor",
 };

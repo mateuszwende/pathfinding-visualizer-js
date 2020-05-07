@@ -1,4 +1,5 @@
 export const CSS_CLASS = {
+  BLOCK: "block",
   NAVIGATION_ITEM: "nav-algorithm-js",
   BLOCKED: "blocked",
   ACTIVE: "active",
@@ -7,10 +8,19 @@ export const CSS_CLASS = {
   WALL: "wall",
   VISITED: "visited",
   UNVISITED: "unvisited",
+  NEIGHBOR: "neighbor",
+  PATH: "path",
 };
 
 export const CSS_ID = {
   NAVIGATION: "nav",
   START_BTN: "startBtn",
   CLEAR_BTN: "clearBtn",
+  CLEAR_WALLS_BTN: "clearWallsBtn",
+  SPEED_INPUT: "speedVal",
+};
+
+export const ANIMATION_TYPE = {
+  DELAYED: "delayed",
+  INSTANT: "instant",
 };

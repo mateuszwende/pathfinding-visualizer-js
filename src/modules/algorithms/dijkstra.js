@@ -1,23 +1,22 @@
 import { getDistanceBetweenNodes, getNodeDirection } from "./helpers/weighted";
 import { getNeighborsIds } from "./helpers/neighbors";
 import { getClosestNode, isSameNode } from "./helpers/nodes";
-import {
-  visualizeNeighborNode,
-  visualizeVisitedNode,
-  visualizePath,
-} from "../helpers/visualizer";
+import { createPath } from "./helpers/createPath";
+import { NODE_STATUS } from "../node/types";
 
 export const dijkstra = async (nodes, start, end, speed) => {
   let unvisitedNodesIds = Object.keys(nodes);
   let visitedNodes = {};
+  let nodesToAnimate = [];
   let foundEnd = false;
 
   while (unvisitedNodesIds.length) {
     const currNode = getClosestNode(unvisitedNodesIds, nodes);
     if (!currNode) break;
-    await visualizeVisitedNode(currNode.id, speed);
 
+    currNode.status = NODE_STATUS.VISITED;
     visitedNodes[currNode.id] = currNode;
+    nodesToAnimate.push(currNode);
 
     if (isSameNode(currNode, end)) {
       foundEnd = true;
@@ -32,6 +31,10 @@ export const dijkstra = async (nodes, start, end, speed) => {
     );
 
     neighborsIds.forEach((neighborId) => {
+      visitedNodes[neighborId] = nodes[neighborId];
+      nodes[neighborId].status = NODE_STATUS.NEIGHBOR;
+      nodesToAnimate.push(nodes[neighborId]);
+
       const distanceBetweenNodes = getDistanceBetweenNodes(
         currNode,
         nodes[neighborId]
@@ -41,7 +44,6 @@ export const dijkstra = async (nodes, start, end, speed) => {
         currNode.dist + distanceBetweenNodes < nodes[neighborId].dist;
 
       if (isNeighborFurtherFromStart) {
-        visualizeNeighborNode(neighborId);
         nodes[neighborId].dist = currNode.dist + distanceBetweenNodes;
         nodes[neighborId].prevId = currNode.id;
         nodes[neighborId].direction = getNodeDirection(
@@ -52,7 +54,5 @@ export const dijkstra = async (nodes, start, end, speed) => {
     });
   }
 
-  if (foundEnd) {
-    visualizePath(visitedNodes, start, end, speed);
-  }
+  return [nodesToAnimate, createPath(visitedNodes, start, end, foundEnd)];
 };

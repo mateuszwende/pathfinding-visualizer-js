@@ -10,7 +10,7 @@ export const createNode = (x, y, algorithm) => {
   return newNode;
 };
 
-export const isNodeBlock = (node) => node.status === NODE_STATUS.BLOCK;
+export const isNodeUnvisited = (node) => node.status === NODE_STATUS.UNVISITED;
 export const isNodeWall = (node) => node.status === NODE_STATUS.WALL;
 export const isNodeStart = (node) => node.status === NODE_STATUS.START;
 export const isNodeEnd = (node) => node.status === NODE_STATUS.END;

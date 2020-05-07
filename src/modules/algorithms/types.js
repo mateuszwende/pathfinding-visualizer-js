@@ -1,4 +1,4 @@
-import { NODE_TYPE } from "../node/types";
+import { NODE_TYPE, NODE_STATUS } from "../node/types";
 import { breadthFirst } from "./breadthFirst";
 import { depthFirst } from "./depthFirst";
 import { dijkstra } from "./dijkstra";
@@ -11,7 +11,7 @@ export const algorithms = {
     node: {
       type: NODE_TYPE.NORMAL,
       initialValues: {
-        status: "block",
+        status: NODE_STATUS.UNVISITED,
         prevId: null,
         dist: Infinity,
       },
@@ -23,7 +23,7 @@ export const algorithms = {
     node: {
       type: NODE_TYPE.NORMAL,
       initialValues: {
-        status: "block",
+        status: NODE_STATUS.UNVISITED,
         prevId: null,
         dist: Infinity,
       },
@@ -35,7 +35,7 @@ export const algorithms = {
     node: {
       type: NODE_TYPE.WEIGHTED,
       initialValues: {
-        status: "block",
+        status: NODE_STATUS.UNVISITED,
         prevId: null,
         dist: Infinity,
         direction: null,
@@ -48,7 +48,7 @@ export const algorithms = {
     node: {
       type: NODE_TYPE.HEURISTIC,
       initialValues: {
-        status: "block",
+        status: NODE_STATUS.UNVISITED,
         prevId: null,
         dist: Infinity,
         direction: null,

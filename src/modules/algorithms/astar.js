@@ -5,16 +5,13 @@ import {
 } from "./helpers/weighted";
 import { getNeighborsIds } from "./helpers/neighbors";
 import { getClosestNodeWithHeuristicDist, isSameNode } from "./helpers/nodes";
-import {
-  visualizeVisitedNode,
-  visualizePath,
-  visualizeNeighborNode,
-} from "../helpers/visualizer";
-import { asyncForEach } from "../helpers/asyncForEach";
+import { NODE_STATUS } from "../node/types";
+import { createPath } from "./helpers/createPath";
 
-export const astar = async (nodes, start, end, speed) => {
+export const astar = (nodes, start, end) => {
   let unvisitedNodesIds = Object.keys(nodes);
   let visitedNodes = {};
+  let nodesToAnimate = [];
   let foundEnd = false;
 
   nodes[start.id].heuristicDistance = getWeightedManhattanDistance(start, end);
@@ -23,9 +20,9 @@ export const astar = async (nodes, start, end, speed) => {
     const currNode = getClosestNodeWithHeuristicDist(unvisitedNodesIds, nodes);
     if (!currNode) break;
 
-    await visualizeVisitedNode(currNode.id, speed);
-
+    currNode.status = NODE_STATUS.VISITED;
     visitedNodes[currNode.id] = currNode;
+    nodesToAnimate.push(currNode);
 
     if (isSameNode(currNode, end)) {
       foundEnd = true;
@@ -39,7 +36,11 @@ export const astar = async (nodes, start, end, speed) => {
       currNode.y
     );
 
-    await asyncForEach(neighborsIds, async (neighborId) => {
+    neighborsIds.forEach((neighborId) => {
+      visitedNodes[neighborId] = nodes[neighborId];
+      nodes[neighborId].status = NODE_STATUS.NEIGHBOR;
+      nodesToAnimate.push(nodes[neighborId]);
+
       const distanceBetweenNodes = getDistanceBetweenNodes(
         currNode,
         nodes[neighborId]
@@ -49,8 +50,6 @@ export const astar = async (nodes, start, end, speed) => {
         currNode.dist + distanceBetweenNodes < nodes[neighborId].dist;
 
       if (isNeighborFurtherFromStart) {
-        await visualizeNeighborNode(neighborId, speed);
-
         nodes[neighborId].dist = currNode.dist + distanceBetweenNodes;
         nodes[neighborId].direction = getNodeDirection(
           currNode,
@@ -64,8 +63,5 @@ export const astar = async (nodes, start, end, speed) => {
       }
     });
   }
-
-  if (foundEnd) {
-    visualizePath(visitedNodes, start, end, speed);
-  }
+  return [nodesToAnimate, createPath(visitedNodes, start, end, foundEnd)];
 };

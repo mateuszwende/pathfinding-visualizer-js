@@ -1,40 +1,56 @@
-import { createBlock } from "./helpers/block";
+import {
+  createBlock,
+  clearBlock,
+  applyEndBlockCSS,
+  applyStartBlockCSS,
+  applyWallBlockCSS,
+} from "./helpers/block";
 import { getRandomNum } from "./helpers/getRandomNum";
 import { getDifferentRandomNum } from "./helpers/getDifferentRandomNum";
-import { directions } from "./algorithms/helpers/weighted";
 import updateObject from "./helpers/updateObject";
+import { hasClass, removeClass, $, addClass } from "./helpers/dom";
 import {
   createNode,
-  isNodeBlock,
+  isNodeUnvisited,
   isNodeWall,
   isNodeStart,
   isNodeEnd,
 } from "./node/operations";
-import EventsHandler from "./events-handler/EventsHandler";
-import { hasClass, removeClass, $, addClass } from "./helpers/dom";
-import { CSS_CLASS, CSS_ID } from "./constants";
+import { CSS_CLASS, CSS_ID, ANIMATION_TYPE } from "./constants";
 import { NODE_STATUS } from "./node/types";
+import { directions } from "./algorithms/helpers/weighted";
+import EventsHandler from "./events-handler/EventsHandler";
+import Visualizer from "./Visualizer";
 
 class Board {
-  constructor({ boardId, blockSize, speed, algorithms, initialAlgorithm }) {
+  constructor({
+    boardId,
+    blockSize,
+    delay,
+    algorithms,
+    initialAlgorithm,
+    initialStartDirection,
+  }) {
     this.boardId = boardId;
     this.blockSize = blockSize;
     this.width = null;
     this.height = null;
     this.nodes = {};
     this.startNode = null;
-    this.startDirection = "east";
+    this.startDirection = initialStartDirection;
     this.endNode = null;
-    this.isNodeDragged = false;
 
     this.isSearching = false;
     this.isPrepared = false;
+    this.isSearched = false;
     this.isMakingWalls = false;
     this.isNodeDragged = false;
     this.draggedNodeId = null;
-    this.speed = speed || 10;
     this.algorithms = algorithms || null;
     this.currentAlgorithm = initialAlgorithm || null;
+
+    this.visualizer = new Visualizer(delay);
+    this.animationType = ANIMATION_TYPE.DELAYED;
   }
 
   initialize() {
@@ -50,8 +66,6 @@ class Board {
     this.addBtnsEventListeners();
 
     EventsHandler.addNavEventListeners(this.handleNavItemOnClick.bind(this));
-
-    console.log(this);
     this.isPrepared = true;
   }
 
@@ -65,11 +79,11 @@ class Board {
     addClass(target, CSS_CLASS.ACTIVE);
 
     this.setCurrentAlgorithm(target.dataset.algorithmKey);
-    this.resetNodes();
+    this.recreateNodes();
   }
 
   calculateBoardSize() {
-    const board = document.getElementById(this.boardId);
+    const board = $.id(this.boardId);
     const pxWidth = board.clientWidth;
     const pxHeight = board.clientHeight;
 
@@ -78,7 +92,7 @@ class Board {
   }
 
   createBoard() {
-    const board = document.getElementById(this.boardId);
+    const board = $.id(this.boardId);
     const tbody = document.createElement("tbody");
 
     for (let y = this.height - 1; y >= 0; y--) {
@@ -93,7 +107,7 @@ class Board {
   }
 
   createNav() {
-    const nav = document.getElementById(CSS_ID.NAVIGATION);
+    const nav = $.id(CSS_ID.NAVIGATION);
     for (let [key, algo] of Object.entries(this.algorithms)) {
       const elem = document.createElement("div");
       addClass(elem, CSS_CLASS.NAVIGATION_ITEM);
@@ -114,11 +128,7 @@ class Board {
     const id = `${randX}-${randY}`;
 
     this.setStartNode(id);
-    const block = document.getElementById(this.startNode.id);
-    addClass(block, NODE_STATUS.START);
-    if (this.startDirection) {
-      addClass(block, this.startDirection);
-    }
+    applyStartBlockCSS(id, this.startDirection);
   }
 
   createEndNode() {
@@ -127,8 +137,7 @@ class Board {
     const id = `${randX}-${randY}`;
 
     this.setEndNode(id);
-    const block = document.getElementById(this.endNode.id);
-    addClass(block, NODE_STATUS.END);
+    applyEndBlockCSS(id);
   }
 
   setStartNode(nodeId) {
@@ -148,7 +157,7 @@ class Board {
     this.endNode = this.nodes[nodeId];
   }
 
-  resetNodeToInitial(nodeId) {
+  setNodeToInitial(nodeId) {
     updateObject(this.nodes[nodeId], this.currentAlgorithm.node.initialValues);
   }
 
@@ -163,26 +172,32 @@ class Board {
         e.target.classList.add(CSS_CLASS.ACTIVE);
 
         this.setCurrentAlgorithm(e.target.dataset.algorithmKey);
-        this.resetNodes();
+        this.resetNodesExpectWalls();
+        this.setStartNode(this.startNode.id);
+        this.setEndNode(this.endNode.id);
       });
     });
   }
 
   addBtnsEventListeners() {
-    const startBtn = document.getElementById(CSS_ID.START_BTN);
-    const clearBtn = document.getElementById(CSS_ID.CLEAR_BTN);
+    const startBtn = $.id(CSS_ID.START_BTN);
+    const clearBtn = $.id(CSS_ID.CLEAR_BTN);
+    const clearWallsBtn = $.id(CSS_ID.CLEAR_WALLS_BTN);
 
-    startBtn.addEventListener("click", (e) => this.handleStart(e));
-    clearBtn.addEventListener("click", (e) => this.handleClear(e));
+    startBtn.addEventListener("click", (e) => this.handleDelayedStart());
+    clearBtn.addEventListener("click", (e) => this.handleClear());
+    clearWallsBtn.addEventListener("click", (e) => this.handleClearWalls());
   }
 
   addBlocksEventListeners() {
-    const blocks = document.querySelectorAll(`.${CSS_CLASS.UNVISITED}`);
+    const blocks = document.querySelectorAll(`.${CSS_CLASS.BLOCK}`);
 
     blocks.forEach((block) => {
       block.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        this.handleMouseDown(block);
+        if (e.which === 1) {
+          e.preventDefault();
+          this.handleMouseDown(block);
+        }
       });
 
       block.addEventListener("mouseenter", (e) => {
@@ -202,34 +217,99 @@ class Board {
     });
   }
 
-  async handleStart(e) {
-    if (this.isPrepared) {
-      this.handleIsSearchingState(true);
-      this.handleIsPreparedState(false);
+  handleDelayedStart() {
+    this.prepareDelayedSearchStateStart();
+    this.animationType = ANIMATION_TYPE.DELAYED;
+    this.handleStart();
+  }
 
-      await this.currentAlgorithm.func(
+  handleInstantStart() {
+    this.prepareInstantSearchStateStart();
+    this.animationType = ANIMATION_TYPE.INSTANT;
+    this.handleStart();
+  }
+
+  async handleStart() {
+    if (this.isPrepared) {
+      this.handleSearchStateStart();
+
+      const [nodesToAnimate, path] = await this.currentAlgorithm.func(
         this.nodes,
         this.startNode,
-        this.endNode,
-        this.speed
+        this.endNode
       );
-      this.handleIsSearchingState(false);
+
+      await this.visualizer.run(nodesToAnimate, path, this.animationType);
+
+      this.handleSearchStateEnd();
     }
   }
 
   handleClear(e) {
     if (!this.isSearching) {
-      this.clearBoard();
-      this.handleIsPreparedState(true);
+      this.resetNodesAll();
+      this.clearBoardAll();
+      this.createStartNode();
+      this.createEndNode();
+      this.isPrepared = true;
+      this.isSearched = false;
+      this.isSearching = false;
     }
+  }
+
+  handleClearWalls() {
+    if (!this.isSearching) {
+      this.clearNodesFromWalls();
+      this.clearBoardFromWalls();
+    }
+  }
+
+  handleSearchStateStart() {
+    this.isSearching = true;
+    this.isPrepared = false;
+    this.isSearched = false;
+    $.id(CSS_ID.CLEAR_BTN).disabled = true;
+    $.id(CSS_ID.CLEAR_WALLS_BTN).disabled = true;
+    $.id(CSS_ID.START_BTN).disabled = true;
+  }
+
+  handleSearchStateEnd() {
+    this.resetNodesExpectWalls();
+    this.setStartNode(this.startNode.id);
+    this.setEndNode(this.endNode.id);
+    this.isSearching = false;
+    this.isPrepared = true;
+    this.isSearched = true;
+    $.id(CSS_ID.CLEAR_BTN).disabled = false;
+    $.id(CSS_ID.CLEAR_WALLS_BTN).disabled = false;
+    $.id(CSS_ID.START_BTN).disabled = false;
+  }
+
+  prepareDelayedSearchStateStart() {
+    this.clearBoardFromNodes();
+    applyStartBlockCSS(this.startNode.id, this.startDirection);
+    applyEndBlockCSS(this.endNode.id);
+    this.isPrepared = true;
+  }
+
+  prepareInstantSearchStateStart() {
+    this.clearBoardFromNodes();
+    applyStartBlockCSS(this.startNode.id);
+    applyEndBlockCSS(this.endNode.id);
+    this.isPrepared = true;
   }
 
   handleMouseDown(block) {
     const id = block.id;
-    if (!isNodeBlock(this.nodes[id])) {
+
+    if (
+      !isNodeUnvisited(this.nodes[id]) &&
+      !isNodeWall(this.nodes[id]) &&
+      !this.isSearching
+    ) {
       this.draggedNodeId = id;
       this.isNodeDragged = true;
-    } else if (!this.isNodeDragged && isNodeBlock(this.nodes[id])) {
+    } else if (!this.isNodeDragged && isNodeUnvisited(this.nodes[id])) {
       this.createWall(block);
       this.isMakingWalls = true;
     }
@@ -237,35 +317,30 @@ class Board {
 
   handleMouseEnter(block) {
     const id = block.id;
-    if (this.isNodeDragged && isNodeBlock(this.nodes[id])) {
-      const draggedNode = this.nodes[this.draggedNodeId];
-      const status = draggedNode.status;
-      addClass(block, status);
 
-      if (isNodeStart(draggedNode)) {
-        const direction = this.startDirection ? this.startDirection : "";
-        addClass(block, direction);
+    if (this.isNodeDragged && isNodeUnvisited(this.nodes[id])) {
+      if (isNodeStart(this.nodes[this.draggedNodeId])) {
+        this.setStartNode(id);
+        applyStartBlockCSS(id, this.startDirection);
+      } else if (isNodeEnd(this.nodes[this.draggedNodeId])) {
+        this.setEndNode(id);
+        applyEndBlockCSS(id);
       }
-    } else if (this.isMakingWalls && isNodeBlock(this.nodes[id])) {
+
+      this.setNodeToInitial(this.draggedNodeId);
+      this.draggedNodeId = id;
+
+      if (this.isSearched) {
+        this.handleInstantStart();
+      }
+    } else if (this.isMakingWalls && isNodeUnvisited(this.nodes[id])) {
       this.createWall(block);
     }
   }
 
   handleMouseUp(block) {
     const id = block.id;
-    if (
-      this.isNodeDragged &&
-      !isNodeWall(this.nodes[id]) &&
-      this.draggedNodeId !== id
-    ) {
-      const draggedNode = this.nodes[this.draggedNodeId];
-      if (isNodeStart(draggedNode)) {
-        this.setStartNode(id);
-      } else if (isNodeEnd(draggedNode)) {
-        this.setEndNode(id);
-      }
-      this.resetNodeToInitial(this.draggedNodeId);
-
+    if (this.isNodeDragged && !isNodeWall(this.nodes[id])) {
       this.isNodeDragged = false;
       this.draggedNodeId = null;
     } else {
@@ -275,61 +350,84 @@ class Board {
 
   handleMouseLeave(block) {
     if (this.isNodeDragged) {
-      const draggedNode = this.nodes[this.draggedNodeId];
-      removeClass(block, draggedNode.status);
-
-      if (isNodeStart(draggedNode)) {
-        const direction = this.startDirection ? this.startDirection : "";
-        removeClass(block, direction);
-      }
+      clearBlock(this.draggedNodeId);
     }
   }
 
   createWall(block) {
-    addClass(block, CSS_CLASS.WALL);
+    this.nodes[block.id].status = NODE_STATUS.WALL;
+    applyWallBlockCSS(block.id);
   }
 
   setCurrentAlgorithm(algoKey) {
     this.currentAlgorithm = algoKey ? this.algorithms[algoKey] : null;
   }
 
-  handleIsSearchingState(isSearching) {
-    this.isSearching = isSearching;
-    document.getElementById(CSS_ID.CLEAR_BTN).disabled = isSearching;
+  clearBoardAll() {
+    this.loopBoard((id) => clearBlock(id));
   }
 
-  handleIsPreparedState(isPrepared) {
-    this.isPrepared = isPrepared;
-    document.getElementById(CSS_ID.START_BTN).disabled = !isPrepared;
-  }
-
-  clearBoard() {
-    for (let y = this.height - 1; y >= 0; y--) {
-      for (let x = 0; x < this.width; x++) {
-        const id = `${x}-${y}`;
-        this.resetNodeToInitial(id);
-
-        document.getElementById(`${x}-${y}`).classList = [];
-        document.getElementById(`${x}-${y}`).classList.add(CSS_CLASS.UNVISITED);
+  clearBoardFromNodes() {
+    this.loopBoard((id) => {
+      if (!$.id(id).classList.contains(CSS_CLASS.WALL)) {
+        clearBlock(id);
       }
-    }
-    this.createStartNode();
-    this.createEndNode();
+    });
   }
 
-  resetNodes() {
+  clearBoardFromWalls() {
+    this.loopBoard((id) => {
+      if ($.id(id).classList.contains(CSS_CLASS.WALL)) {
+        clearBlock(id);
+      }
+    });
+  }
+
+  resetNodesExpectWalls() {
+    this.loopBoard((id) => {
+      if (!isNodeWall(this.nodes[id])) {
+        this.setNodeToInitial(id);
+      }
+    });
+  }
+
+  clearNodesFromWalls() {
+    this.loopBoard((id, x, y) => {
+      if (isNodeWall(this.nodes[id])) {
+        this.setNodeToInitial(id);
+      }
+    });
+  }
+
+  resetNodesAll() {
+    this.setNodesToInitial();
+  }
+
+  setNodesToInitial() {
+    this.loopBoard((id) => this.setNodeToInitial(id));
+  }
+
+  recreateNodes() {
     const currStartNodeId = this.startNode.id;
     const currEndNodeId = this.endNode.id;
-    this.nodes = {};
 
-    for (let y = this.height - 1; y >= 0; y--) {
-      for (let x = 0; x < this.width; x++) {
-        const id = `${x}-${y}`;
+    this.loopBoard((id, x, y) => {
+      if (isNodeWall(this.nodes[id])) {
         this.nodes[id] = createNode(x, y, this.currentAlgorithm);
-      }
-    }
+        this.nodes[id].status = NODE_STATUS.WALL;
+      } else this.nodes[id] = createNode(x, y, this.currentAlgorithm);
+    });
+
     this.setStartNode(currStartNodeId);
     this.setEndNode(currEndNodeId);
+  }
+
+  loopBoard(callback) {
+    for (let y = this.height - 1; y >= 0; y--) {
+      for (let x = 0; x < this.width; x++) {
+        callback(`${x}-${y}`, x, y);
+      }
+    }
   }
 }
 
