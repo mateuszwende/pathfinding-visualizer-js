@@ -1,17 +1,18 @@
 .unvisited,
-.visited {
+.visited,
+.neighbor {
   border: 1px solid $board-border-color;
 }
 
 @keyframes animateVisitedNeighbor {
   0% {
-    background-color: transparent;
+    background: transparent;
     transform: scale(0);
 
     // clip-path: inset(70% round 70%);
   }
   40% {
-    background-color: lighten($neighbor-color, 15%);
+    background: lighten($neighbor-color, 15%);
     transform: scale(0.5);
   }
   70% {
@@ -20,12 +21,12 @@
   }
   100% {
     transform: scale(1);
-    background-color: $neighbor-color;
+    background: $neighbor-color;
   }
 }
 
 .neighbor {
-  background-color: $neighbor-color;
+  background: $neighbor-color;
   animation-name: animateVisitedNeighbor;
   animation-duration: 0.5s;
   animation-timing-function: ease-in-out;
@@ -39,29 +40,29 @@
 
 @keyframes animateVisited {
   0% {
-    background-color: transparent;
+    background: transparent;
     // clip-path: inset(0% round 0%);
-    transform: scale(0.6);
+    transform: scale(0.5);
   }
-  20% {
-    background-color: $visited-third-color;
+  30% {
+    background: $visited-third-color;
   }
-  75% {
-    background-color: $visited-second-color;
+  60% {
+    background: $visited-second-color;
     // clip-path: inset(50% round 50%);
     transform: scale(1.2);
   }
   100% {
-    background-color: $visited-main-color;
+    background: $visited-main-color;
     // clip-path: inset(100% round 0%);
     transform: scale(1);
   }
 }
 
 .visited {
-  background-color: $visited-main-color;
+  background: $visited-main-color;
   animation-name: animateVisited;
-  animation-duration: 1.2s;
+  animation-duration: 1s;
   animation-timing-function: linear;
 
   -webkit-transform: translate3d(0, 0, 0);
@@ -69,6 +70,10 @@
   -ms-transform: translate3d(0, 0, 0);
   -o-transform: translate3d(0, 0, 0);
   transform: translate3d(0, 0, 0);
+  animation-direction: alternate;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+  animation-play-state: running;
 }
 
 @keyframes animateWall {
@@ -89,7 +94,7 @@
 }
 
 .wall {
-  background-color: $wall-color;
+  background: $wall-color;
   animation-name: animateWall;
   animation-duration: 0.2s;
 
@@ -99,21 +104,23 @@
   -ms-transform: translate3d(0, 0, 0);
   -o-transform: translate3d(0, 0, 0);
   transform: translate3d(0, 0, 0);
+  border: none;
+  border-style: hidden;
 }
 
 @keyframes animatePath {
   0% {
-    background-color: #621284;
+    background: #621284;
     transform: scale(0.5);
   }
   100% {
-    background-color: #ff8f03;
+    background: $path-color;
     transform: scale(1);
   }
 }
 
 .path {
-  background-color: $path-color;
+  background: $path-color;
   animation-name: animatePath;
   animation-duration: 0.8s;
   animation-timing-function: ease-in;
@@ -138,16 +145,33 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url("../../images/arrow.svg");
+    background-color: $icon-color;
     background-position: unset;
     background-repeat: no-repeat;
+    -webkit-mask-image: url("../../images/arrow.svg");
+    mask-image: url("../../images/arrow.svg");
   }
 }
 
 .end {
-  background-image: url("../../images/aim.svg");
-  background-position: center;
-  background-repeat: no-repeat;
+  width: 100%;
+  height: 100%;
+  position: relative;
+
+  &:before {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: $icon-color;
+    background-position: unset;
+    background-repeat: no-repeat;
+    -webkit-mask-image: url("../../images/aim.svg");
+    mask-image: url("../../images/aim.svg");
+  }
 }
 
 .north:before {
@@ -167,13 +191,15 @@
 }
 
 .instant-neighbor {
-  background-color: $neighbor-color;
+  background: $neighbor-color;
+  border: 1px solid $visited-main-color;
 }
 
 .instant-visited {
-  background-color: $visited-main-color;
+  background: $visited-main-color;
+  border: 1px solid $board-border-color;
 }
 
 .instant-path {
-  background-color: $path-color;
+  background: $path-color;
 }

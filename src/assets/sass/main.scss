@@ -8,3 +8,11 @@
 @import "./partials/header.scss";
 @import "./partials/block.scss";
 @import "./partials/input.scss";
+
+body {
+  position: relative;
+  background: url("../images/bg.jpg");
+  background-position: center;
+  background-repeat: no-repeat;
+  color: $text-color;
+}

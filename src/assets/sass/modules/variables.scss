@@ -1,12 +1,20 @@
+$main-bg: rgba(0, 0, 0, 0.95);
+
 $main-color: #1ee0eb;
 
 $unvisited-color: transparent;
-$visited-main-color: #1ee0eb;
-$visited-second-color: #d297ff;
-$visited-third-color: lightseagreen;
+$visited-main-color: rgba(0, 70, 119, 0.65);
+$visited-second-color: rgba(204, 173, 255, 0.58);
+$visited-third-color: rgba(239, 88, 199, 0.57);
 
-$neighbor-color: #33ff00bf;
-$wall-color: #0d1433;
-$path-color: #ff8f03;
+$neighbor-color: rgba(104, 238, 243, 0.6);
+$wall-color: rgba(28, 150, 187, 0.6);
+$path-color: rgba(252, 255, 91, 0.7);
 
-$board-border-color: lightblue;
+$board-border-color: #1c96bb70;
+
+$text-color: rgba(255, 255, 255, 0.836);
+$text-color-active: #1ee0eb;
+$text-color-disabled: grey;
+
+$icon-color: rgba(255, 255, 255, 0.79);
