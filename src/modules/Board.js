@@ -273,8 +273,8 @@ class Board {
     $.id(CSS_ID.CLEAR_BTN).disabled = true;
     $.id(CSS_ID.CLEAR_WALLS_BTN).disabled = true;
     $.id(CSS_ID.START_BTN).disabled = true;
-    const elems = document.querySelectorAll(`.${CSS_CLASS.NAVIGATION_ITEM}`);
 
+    const elems = document.querySelectorAll(`.${CSS_CLASS.NAVIGATION_ITEM}`);
     elems.forEach((elem) => {
       elem.classList.add(CSS_CLASS.BLOCKED);
     });
@@ -290,6 +290,11 @@ class Board {
     $.id(CSS_ID.CLEAR_BTN).disabled = false;
     $.id(CSS_ID.CLEAR_WALLS_BTN).disabled = false;
     $.id(CSS_ID.START_BTN).disabled = false;
+
+    const elems = document.querySelectorAll(`.${CSS_CLASS.NAVIGATION_ITEM}`);
+    elems.forEach((elem) => {
+      elem.classList.remove(CSS_CLASS.BLOCKED);
+    });
   }
 
   prepareDelayedSearchStateStart() {
