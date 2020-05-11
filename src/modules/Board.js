@@ -5,21 +5,10 @@ import {
   applyStartBlockCSS,
   applyWallBlockCSS,
 } from "./helpers/block";
-import { getRandomNum } from "./helpers/getRandomNum";
-import { getDifferentRandomNum } from "./helpers/getDifferentRandomNum";
-import updateObject from "./helpers/updateObject";
 import { hasClass, removeClass, $, addClass } from "./helpers/dom";
-import {
-  createNode,
-  isNodeUnvisited,
-  isNodeWall,
-  isNodeStart,
-  isNodeEnd,
-} from "./node/operations";
 import { CSS_CLASS, CSS_ID, ANIMATION_TYPE } from "./constants";
-import { NODE_STATUS } from "./node/types";
-import { directions } from "./algorithms/helpers/weighted";
 import EventsHandler from "./events-handler/EventsHandler";
+import NodesManager from "./node/NodesManager";
 import Visualizer from "./Visualizer";
 
 class Board {
@@ -35,10 +24,8 @@ class Board {
     this.blockSize = blockSize;
     this.width = null;
     this.height = null;
-    this.nodes = {};
-    this.startNode = null;
+    this.nodeManager = null;
     this.startDirection = initialStartDirection;
-    this.endNode = null;
 
     this.isSearching = false;
     this.isPrepared = false;
@@ -58,16 +45,29 @@ class Board {
     this.createNav();
     this.calculateBoardSize();
     this.createBoard();
-    this.createStartNode();
-    this.createEndNode();
+    this.initializeNodesManager();
+    this.nodesManager.createNodes();
+    this.nodesManager.setRandomStartNode();
+    this.nodesManager.setStartDirection(this.startDirection);
+    this.nodesManager.setRandomEndNode();
+    applyStartBlockCSS(this.nodesManager.startNode.id, this.startDirection);
+    applyEndBlockCSS(this.nodesManager.endNode.id);
 
     this.setInitialActiveNavAlgorithm();
-    this.addNavAlgoElemsEventListeners();
     this.addBlocksEventListeners();
     this.addBtnsEventListeners();
-
     EventsHandler.addNavEventListeners(this.handleNavItemOnClick.bind(this));
+
     this.isPrepared = true;
+  }
+
+  initializeNodesManager() {
+    this.nodesManager = new NodesManager(
+      this.width,
+      this.height,
+      this.currentAlgorithm,
+      this.initialStartDirection
+    );
   }
 
   handleNavItemOnClick(e) {
@@ -79,9 +79,7 @@ class Board {
     );
     addClass(target, CSS_CLASS.ACTIVE);
 
-    this.setCurrentAlgorithm(target.dataset.algorithmKey);
-    this.isAlgorithmChanged = true;
-    this.recreateNodes();
+    this.handleAlgorithmChange(target.dataset.algorithmKey);
   }
 
   calculateBoardSize() {
@@ -101,7 +99,6 @@ class Board {
       const row = document.createElement("tr");
       for (let x = 0; x < this.width; x++) {
         createBlock(row, this.blockSize, x, y);
-        this.nodes[`${x}-${y}`] = createNode(x, y, this.currentAlgorithm);
       }
       tbody.appendChild(row);
     }
@@ -124,61 +121,11 @@ class Board {
     elems[0].classList.add(CSS_CLASS.ACTIVE);
   }
 
-  createStartNode() {
-    const randX = getRandomNum(0, this.width - 1);
-    const randY = getRandomNum(0, this.height - 1);
-    const id = `${randX}-${randY}`;
-
-    this.setStartNode(id);
-    applyStartBlockCSS(id, this.startDirection);
-  }
-
-  createEndNode() {
-    const randX = getDifferentRandomNum(0, this.width - 1, this.startNode.x);
-    const randY = getDifferentRandomNum(0, this.height - 1, this.startNode.y);
-    const id = `${randX}-${randY}`;
-
-    this.setEndNode(id);
-    applyEndBlockCSS(id);
-  }
-
-  setStartNode(nodeId) {
-    updateObject(this.nodes[nodeId], {
-      status: NODE_STATUS.START,
-      dist: 0,
-      direction: this.startDirection ? directions[this.startDirection] : null,
-    });
-    this.startNode = this.nodes[nodeId];
-  }
-
-  setEndNode(nodeId) {
-    updateObject(this.nodes[nodeId], {
-      status: NODE_STATUS.END,
-      dist: Infinity,
-    });
-    this.endNode = this.nodes[nodeId];
-  }
-
-  setNodeToInitial(nodeId) {
-    updateObject(this.nodes[nodeId], this.currentAlgorithm.node.initialValues);
-  }
-
-  addNavAlgoElemsEventListeners() {
-    const elems = document.querySelectorAll(`.${CSS_CLASS.NAVIGATION_ITEM}`);
-
-    elems.forEach((elem) => {
-      elem.addEventListener("click", (e) => {
-        if (hasClass(e.target, CSS_CLASS.BLOCKED)) return;
-
-        elems.forEach((elem) => elem.classList.remove(CSS_CLASS.ACTIVE));
-        e.target.classList.add(CSS_CLASS.ACTIVE);
-
-        this.setCurrentAlgorithm(e.target.dataset.algorithmKey);
-        this.resetNodesExpectWalls();
-        this.setStartNode(this.startNode.id);
-        this.setEndNode(this.endNode.id);
-      });
-    });
+  handleAlgorithmChange(algoKey) {
+    this.setCurrentAlgorithm(algoKey);
+    this.isAlgorithmChanged = true;
+    this.nodesManager.currentAlgorithm = this.algorithms[algoKey];
+    this.nodesManager.recreateNodes();
   }
 
   addBtnsEventListeners() {
@@ -236,9 +183,9 @@ class Board {
       this.handleSearchStateStart();
 
       const [nodesToAnimate, path] = await this.currentAlgorithm.func(
-        this.nodes,
-        this.startNode,
-        this.endNode
+        this.nodesManager.nodes,
+        this.nodesManager.startNode,
+        this.nodesManager.endNode
       );
 
       await this.visualizer.run(nodesToAnimate, path, this.animationType);
@@ -249,10 +196,12 @@ class Board {
 
   handleClear(e) {
     if (!this.isSearching) {
-      this.resetNodesAll();
       this.clearBoardAll();
-      this.createStartNode();
-      this.createEndNode();
+      this.nodesManager.resetNodesAll();
+      this.nodesManager.setRandomStartNode();
+      this.nodesManager.setRandomEndNode();
+      applyStartBlockCSS(this.nodesManager.startNode.id, this.startDirection);
+      applyEndBlockCSS(this.nodesManager.endNode.id);
       this.isPrepared = true;
       this.isSearched = false;
       this.isSearching = false;
@@ -261,7 +210,7 @@ class Board {
 
   handleClearWalls() {
     if (!this.isSearching) {
-      this.clearNodesFromWalls();
+      this.nodesManager.clearNodesFromWalls();
       this.clearBoardFromWalls();
     }
   }
@@ -281,9 +230,9 @@ class Board {
   }
 
   handleSearchStateEnd() {
-    this.resetNodesExpectWalls();
-    this.setStartNode(this.startNode.id);
-    this.setEndNode(this.endNode.id);
+    this.nodesManager.resetNodesExpectWalls();
+    this.nodesManager.retrieveStartNode();
+    this.nodesManager.retrieveEndNode();
     this.isSearching = false;
     this.isPrepared = true;
     this.isSearched = true;
@@ -299,28 +248,33 @@ class Board {
 
   prepareDelayedSearchStateStart() {
     this.clearBoardFromNodes();
-    applyStartBlockCSS(this.startNode.id, this.startDirection);
-    applyEndBlockCSS(this.endNode.id);
+    applyStartBlockCSS(this.nodesManager.startNode.id, this.startDirection);
+    applyEndBlockCSS(this.nodesManager.endNode.id);
     this.isPrepared = true;
   }
 
   prepareInstantSearchStateStart() {
     this.clearBoardFromNodes();
-    applyStartBlockCSS(this.startNode.id);
-    applyEndBlockCSS(this.endNode.id);
+    applyStartBlockCSS(this.nodesManager.startNode.id, this.startDirection);
+    applyEndBlockCSS(this.nodesManager.endNode.id);
     this.isPrepared = true;
   }
 
   handleMouseDown(block) {
     const id = block.id;
-    if (
-      !isNodeUnvisited(this.nodes[id]) &&
-      !isNodeWall(this.nodes[id]) &&
-      !this.isSearching
-    ) {
+
+    const isDraggable =
+      !this.nodesManager.isNodeUnvisited(id) &&
+      !this.nodesManager.isNodeWall(id) &&
+      !this.isSearching;
+
+    const canCreateWall =
+      !this.isNodeDragged && this.nodesManager.isNodeUnvisited(id);
+
+    if (isDraggable) {
       this.draggedNodeId = id;
       this.isNodeDragged = true;
-    } else if (!this.isNodeDragged && isNodeUnvisited(this.nodes[id])) {
+    } else if (canCreateWall) {
       this.createWall(block);
       this.isMakingWalls = true;
     }
@@ -329,29 +283,29 @@ class Board {
   handleMouseEnter(block) {
     const id = block.id;
 
-    if (this.isNodeDragged && isNodeUnvisited(this.nodes[id])) {
-      if (isNodeStart(this.nodes[this.draggedNodeId])) {
-        this.setStartNode(id);
+    if (this.isNodeDragged && this.nodesManager.isNodeUnvisited(id)) {
+      if (this.nodesManager.isNodeStart(this.draggedNodeId)) {
+        this.nodesManager.setStartNode(id);
         applyStartBlockCSS(id, this.startDirection);
-      } else if (isNodeEnd(this.nodes[this.draggedNodeId])) {
-        this.setEndNode(id);
+      } else if (this.nodesManager.isNodeEnd(this.draggedNodeId)) {
+        this.nodesManager.setEndNode(id);
         applyEndBlockCSS(id);
       }
 
-      this.setNodeToInitial(this.draggedNodeId);
+      this.nodesManager.setNodeToInitial(this.draggedNodeId);
       this.draggedNodeId = id;
 
       if (this.isSearched) {
         this.handleInstantStart();
       }
-    } else if (this.isMakingWalls && isNodeUnvisited(this.nodes[id])) {
+    } else if (this.isMakingWalls && this.nodesManager.isNodeUnvisited(id)) {
       this.createWall(block);
     }
   }
 
   handleMouseUp(block) {
     const id = block.id;
-    if (this.isNodeDragged && !isNodeWall(this.nodes[id])) {
+    if (this.isNodeDragged && !this.nodesManager.isNodeWall(id)) {
       this.isNodeDragged = false;
       this.draggedNodeId = null;
     } else {
@@ -359,14 +313,14 @@ class Board {
     }
   }
 
-  handleMouseLeave(block) {
+  handleMouseLeave() {
     if (this.isNodeDragged) {
       clearBlock(this.draggedNodeId);
     }
   }
 
   createWall(block) {
-    this.nodes[block.id].status = NODE_STATUS.WALL;
+    this.nodesManager.setNodeToWall(block.id);
     applyWallBlockCSS(block.id);
   }
 
@@ -392,45 +346,6 @@ class Board {
         clearBlock(id);
       }
     });
-  }
-
-  resetNodesExpectWalls() {
-    this.loopBoard((id) => {
-      if (!isNodeWall(this.nodes[id])) {
-        this.setNodeToInitial(id);
-      }
-    });
-  }
-
-  clearNodesFromWalls() {
-    this.loopBoard((id, x, y) => {
-      if (isNodeWall(this.nodes[id])) {
-        this.setNodeToInitial(id);
-      }
-    });
-  }
-
-  resetNodesAll() {
-    this.setNodesToInitial();
-  }
-
-  setNodesToInitial() {
-    this.loopBoard((id) => this.setNodeToInitial(id));
-  }
-
-  recreateNodes() {
-    const currStartNodeId = this.startNode.id;
-    const currEndNodeId = this.endNode.id;
-
-    this.loopBoard((id, x, y) => {
-      if (isNodeWall(this.nodes[id])) {
-        this.nodes[id] = createNode(x, y, this.currentAlgorithm);
-        this.nodes[id].status = NODE_STATUS.WALL;
-      } else this.nodes[id] = createNode(x, y, this.currentAlgorithm);
-    });
-
-    this.setStartNode(currStartNodeId);
-    this.setEndNode(currEndNodeId);
   }
 
   loopBoard(callback) {

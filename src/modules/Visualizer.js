@@ -1,7 +1,7 @@
 import { asyncForEach } from "./helpers/asyncForEach";
 import asyncDelay from "./helpers/asyncDelay";
 import { $ } from "./helpers/dom";
-import { NODE_STATUS } from "./node/types";
+import { NODE_STATUS } from "./node/constants";
 import { CSS_CLASS, ANIMATION_TYPE, CSS_ID } from "./constants";
 
 class Visualizer {

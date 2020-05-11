@@ -2,9 +2,9 @@ import { getDistanceBetweenNodes, getNodeDirection } from "./helpers/weighted";
 import { getNeighborsIds } from "./helpers/neighbors";
 import { getClosestNode, isSameNode } from "./helpers/nodes";
 import { createPath } from "./helpers/createPath";
-import { NODE_STATUS } from "../node/types";
+import { NODE_STATUS } from "../node/constants";
 
-export const dijkstra = async (nodes, start, end, speed) => {
+export const dijkstra = async (nodes, start, end) => {
   let unvisitedNodesIds = Object.keys(nodes);
   let visitedNodes = {};
   let nodesToAnimate = [];

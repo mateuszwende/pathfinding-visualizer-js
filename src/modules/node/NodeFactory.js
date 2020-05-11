@@ -1,7 +1,7 @@
-import Node from "./Node";
-import NodeWeighted from "./NodeWeighted";
-import NodeHeuristic from "./NodeHeuristic";
-import { NODE_TYPE } from "./types";
+import Node from "./types/Node";
+import NodeWeighted from "./types/NodeWeighted";
+import NodeHeuristic from "./types/NodeHeuristic";
+import { NODE_TYPE } from "./constants";
 
 class NodeFactory {
   static createNode(type, props) {

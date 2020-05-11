@@ -1,6 +1,6 @@
 import "./assets/sass/main.scss";
 import Board from "./modules/Board";
-import { algorithms } from "./modules/algorithms/types";
+import { algorithms } from "./modules/algorithms";
 
 const board = new Board({
   boardId: "board",

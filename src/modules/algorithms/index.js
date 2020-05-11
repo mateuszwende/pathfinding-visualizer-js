@@ -1,4 +1,4 @@
-import { NODE_TYPE, NODE_STATUS } from "../node/types";
+import { NODE_TYPE, NODE_STATUS } from "../node/constants";
 import { breadthFirst } from "./breadthFirst";
 import { depthFirst } from "./depthFirst";
 import { dijkstra } from "./dijkstra";

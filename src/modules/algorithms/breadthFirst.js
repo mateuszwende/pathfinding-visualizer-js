@@ -1,7 +1,7 @@
 import { getNeighborsIds } from "./helpers/neighbors";
 import { getClosestNode, isSameNode } from "./helpers/nodes";
-import { NODE_STATUS } from "../node/types";
 import { createPath } from "./helpers/createPath";
+import { NODE_STATUS } from "../node/constants";
 
 export const breadthFirst = (nodes, start, end) => {
   let unvisitedNodesIds = Object.keys(nodes);
